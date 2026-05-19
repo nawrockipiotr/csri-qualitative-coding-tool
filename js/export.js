@@ -17,6 +17,7 @@ function exportJSON() {
       coding_language: state.codingLang,
       coder_id: state.coderId,
       source_type: state.sourceType,
+      source_files: [...new Set(state.segments.map(s => s.source_file).filter(Boolean))],
       export_timestamp: new Date().toISOString(),
       stats: {
         total_segments: state.segments.length,
@@ -56,11 +57,11 @@ function exportCSV() {
     for (const th of dimThemes) themeToDim[th] = dim;
   }
 
-  const header = 'segment_id,text_primary,author,first_order_code,code_type,coding_mode,final_decision,second_order_theme,aggregate_dimension,notes';
+  const header = 'segment_id,source_file,text_primary,author,first_order_code,code_type,coding_mode,final_decision,second_order_theme,aggregate_dimension,notes';
   const rows = state.codedRecords.map(r => {
     const theme = codeToTheme[r.first_order_code] || '';
     const dim = themeToDim[theme] || '';
-    return [r.segment_id, csvEsc(r.text_primary), csvEsc(r.author || ''), csvEsc(r.first_order_code),
+    return [r.segment_id, csvEsc(r.source_file || ''), csvEsc(r.text_primary), csvEsc(r.author || ''), csvEsc(r.first_order_code),
             r.code_type, r.coding_mode || '', r.final_decision || '', csvEsc(theme), csvEsc(dim), csvEsc(r.notes || '')].join(',');
   });
 

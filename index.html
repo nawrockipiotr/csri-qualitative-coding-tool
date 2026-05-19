@@ -26,7 +26,7 @@
 
     <h1>Qualitative Coding Tool <span class="version-tag">v0.1</span></h1>
     <p class="hero-lead" data-i18n="hero_lead">
-      Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Trzy tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany), eksport do JSON/CSV/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.
+      Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Cztery tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany, pełna automatyzacja), eksport do JSON/CSV/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.
     </p>
 
     <!-- How to use — collapsible -->
@@ -34,7 +34,7 @@
       <summary class="info-title"><span data-i18n="hero_howto_title">Jak korzystać z narzędzia</span> <span class="howto-hide-hint" data-i18n="hero_howto_hide">(kliknij, aby ukryć)</span></summary>
       <div class="info-content">
         <strong>1.</strong> <span data-i18n="howto_step1">Wklej klucz API wybranego dostawcy AI (Anthropic, OpenAI, Google) lub połącz z lokalnym modelem.</span><br>
-        <strong>2.</strong> <span data-i18n="howto_step2">Wklej dane źródłowe (transkrypcje, notatki, JSON z Transcript Tool) i skonfiguruj tryb kodowania.</span><br>
+        <strong>2.</strong> <span data-i18n="howto_step2">Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Możesz załadować wiele plików naraz.</span><br>
         <strong>3.</strong> <span data-i18n="howto_step3">Koduj segment po segmencie. W trybie indukcyjnym kodujesz sam, w pozostałych AI wspiera Twoje decyzje.</span><br>
         <strong>4.</strong> <span data-i18n="howto_step4">Zarządzaj codebookiem, buduj tematy 2nd-order i wymiary. Eksportuj do JSON, CSV lub tabeli Gioia.</span>
       </div>
@@ -134,7 +134,27 @@
   <div id="view-setup" class="view-panel" style="display:block">
 
     <div class="setup-section">
-      <label data-i18n="setup_source_data">Dane źródłowe (wklej tekst lub JSON)</label>
+      <label data-i18n="setup_source_data">Dane źródłowe</label>
+
+      <!-- Drop zone -->
+      <div id="dropZone" class="drop-zone" tabindex="0">
+        <div class="drop-zone-content">
+          <i data-lucide="upload" class="drop-zone-icon"></i>
+          <p class="drop-zone-text" data-i18n="drop_zone_text">Przeciągnij pliki tutaj lub kliknij, aby wybrać</p>
+          <p class="drop-zone-hint" data-i18n="drop_zone_hint">TXT, JSON, CSV, DOCX — możesz upuścić wiele plików naraz</p>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".txt,.json,.csv,.docx" style="display:none">
+      </div>
+
+      <!-- File list -->
+      <div id="fileList" class="file-list" style="display:none"></div>
+
+      <!-- Separator -->
+      <div class="import-separator">
+        <span data-i18n="import_or">lub wklej tekst</span>
+      </div>
+
+      <!-- Textarea (kept for paste) -->
       <textarea id="importText" data-i18n="setup_source_placeholder" placeholder="Wklej transkrypcję, notatki terenowe, dane z Transcript Tool (JSON)..."></textarea>
       <button class="action-btn secondary" onclick="parseImportData()" data-i18n="setup_parse">Parsuj dane</button>
       <div id="statusMsg" class="status-msg" style="display:none"></div>
@@ -250,6 +270,7 @@
 </div>
 
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/prompts.js"></script>
 <script src="js/api.js"></script>

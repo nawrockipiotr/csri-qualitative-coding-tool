@@ -513,6 +513,65 @@ h1 {
 
 .setup-section textarea:focus { border-color: var(--accent-teal); }
 
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface2);
+  margin-bottom: 0.75rem;
+}
+.drop-zone:hover, .drop-zone:focus-visible { border-color: var(--accent-teal); background: var(--accent-teal-dim); }
+.drop-zone.drag-over { border-color: var(--accent-teal); background: var(--accent-teal-dim); border-style: solid; }
+.drop-zone-icon { width: 2rem; height: 2rem; color: var(--text-dim); margin-bottom: 0.5rem; }
+.drop-zone-text { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 0.25rem; }
+.drop-zone-hint { font-size: 0.8rem; color: var(--text-dim); }
+
+.file-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.file-badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  background: var(--accent-teal-dim);
+  border: 1px solid var(--accent-teal);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.file-badge .file-remove {
+  cursor: pointer; color: var(--text-dim); font-size: 1rem; line-height: 1;
+  margin-left: 0.2rem;
+}
+.file-badge .file-remove:hover { color: var(--red); }
+.file-badge .file-ext { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
+
+.import-separator {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin: 0.5rem 0;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+.import-separator::before, .import-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Merge dialog */
+.merge-dialog {
+  background: var(--surface);
+  border: 1px solid var(--accent-teal);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin: 0.75rem 0;
+}
+.merge-dialog-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; }
+.merge-dialog-info { font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem; }
+.merge-dialog-btns { display: flex; gap: 0.5rem; }
+
 .mode-options { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.5rem 0; }
 
 .mode-option {
@@ -920,6 +979,11 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
 .dark-mode .setup-section input,
 .dark-mode .setup-section textarea,
 .dark-mode .coding-input-area input { background: var(--surface2); color: var(--text); }
+
+.dark-mode .drop-zone { background: var(--surface2); border-color: var(--border); }
+.dark-mode .drop-zone:hover, .dark-mode .drop-zone.drag-over { background: var(--accent-teal-dim); border-color: var(--accent-teal); }
+.dark-mode .file-badge { background: var(--accent-dim); border-color: var(--accent-teal); }
+.dark-mode .merge-dialog { background: var(--surface); border-color: var(--accent-teal); }
 
 .dark-mode .theme-card { background: var(--surface); }
 .dark-mode .auto-review-table td,

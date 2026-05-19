@@ -21,8 +21,8 @@ const I18N = {
     en: 'Paste your API key from the selected AI provider (Anthropic, OpenAI, Google) or connect a local model server.'
   },
   howto_step2: {
-    pl: 'Wklej dane źródłowe (transkrypcje, notatki, JSON z Transcript Tool) i skonfiguruj tryb kodowania.',
-    en: 'Paste your source data (transcripts, notes, JSON from Transcript Tool) and configure the coding mode.'
+    pl: 'Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Możesz załadować wiele plików naraz — zostaną połączone w jedną pulę segmentów.',
+    en: 'Drag & drop files (TXT, JSON, CSV, DOCX) or paste text. You can load multiple files at once — they will be merged into a single segment pool.'
   },
   howto_step3: {
     pl: 'Koduj segment po segmencie. W trybie indukcyjnym kodujesz sam, w pozostałych AI wspiera Twoje decyzje.',
@@ -97,7 +97,7 @@ const I18N = {
   nav_export: { pl: 'Eksport', en: 'Export' },
 
   // Setup
-  setup_source_data: { pl: 'Dane źródłowe (wklej tekst lub JSON)', en: 'Source data (paste text or JSON)' },
+  setup_source_data: { pl: 'Dane źródłowe', en: 'Source data' },
   setup_source_placeholder: {
     pl: 'Wklej transkrypcję, notatki terenowe, dane z Transcript Tool (JSON)...',
     en: 'Paste transcript, field notes, Transcript Tool data (JSON)...'
@@ -229,6 +229,54 @@ const I18N = {
   hint_themes_desc: {
     pl: 'Zakodowałeś wystarczającą liczbę segmentów. Przejdź do Codebook, żeby wygenerować tematy 2nd-order z AI lub stworzyć je ręcznie.',
     en: 'You have coded enough segments. Go to Codebook to generate second-order themes with AI or create them manually.'
+  },
+  sat_warning_title: {
+    pl: 'Nasycenie nie osiągnięte',
+    en: 'Saturation not reached'
+  },
+  sat_warning_text: {
+    pl: 'W ostatnich 10 segmentach pojawiło się {n} nowych kodów. Kodowanie może nie być nasycone — tematy mogą być niestabilne.',
+    en: '{n} new codes appeared in the last 10 segments. Coding may not be saturated — themes may be unstable.'
+  },
+  auto_themes_pass1: {
+    pl: 'Generowanie tematów (pass 1/3 — grupowanie)...',
+    en: 'Generating themes (pass 1/3 — grouping)...'
+  },
+  auto_themes_pass2: {
+    pl: 'Krytyka tematów (pass 2/3 — weryfikacja)...',
+    en: 'Critiquing themes (pass 2/3 — review)...'
+  },
+  auto_themes_pass3: {
+    pl: 'Korekta tematów (pass 3/3 — rewizja)...',
+    en: 'Revising themes (pass 3/3 — revision)...'
+  },
+  auto_abduction_progress: {
+    pl: 'Pętla abdukcyjna — re-kodowanie',
+    en: 'Abduction loop — re-coding'
+  },
+  viz_grounding: {
+    pl: 'Uzasadnienie teoretyczne',
+    en: 'Theoretical grounding'
+  },
+  viz_abduction_stats: {
+    pl: 'Pętla abdukcyjna',
+    en: 'Abduction loop'
+  },
+  viz_recoded: {
+    pl: 'Przekodowano segmentów',
+    en: 'Recoded segments'
+  },
+  viz_orphans: {
+    pl: 'Segmentów-sierot (nie pasują do żadnego tematu)',
+    en: 'Orphan segments (no theme fit)'
+  },
+  viz_drift_warnings: {
+    pl: 'Ostrzeżenia drift',
+    en: 'Drift warnings'
+  },
+  viz_drift_batch: {
+    pl: 'Batch',
+    en: 'Batch'
   },
   hint_go_codebook: {
     pl: 'Przejdź do Codebook',
@@ -407,6 +455,23 @@ const I18N = {
     pl: 'Lokalny model przez API kompatybilne z OpenAI. Dane pozostają na Twoim komputerze.',
     en: 'Local model via OpenAI-compatible API. Data stays on your machine.'
   },
+
+  // Drop zone & file import
+  drop_zone_text: { pl: 'Przeciągnij pliki tutaj lub kliknij, aby wybrać', en: 'Drag files here or click to browse' },
+  drop_zone_hint: { pl: 'TXT, JSON, CSV, DOCX — możesz upuścić wiele plików naraz', en: 'TXT, JSON, CSV, DOCX — you can drop multiple files at once' },
+  drop_unsupported: { pl: 'Nieobsługiwany format pliku. Obsługiwane: TXT, JSON, CSV, DOCX.', en: 'Unsupported file format. Supported: TXT, JSON, CSV, DOCX.' },
+  drop_processing: { pl: 'Przetwarzanie', en: 'Processing' },
+  drop_file: { pl: 'plik', en: 'file' },
+  drop_files: { pl: 'plików', en: 'files' },
+  drop_loaded: { pl: 'Załadowano', en: 'Loaded' },
+  drop_remove: { pl: 'Usuń plik', en: 'Remove file' },
+  import_or: { pl: 'lub wklej tekst', en: 'or paste text' },
+  merge_title: { pl: 'Sesja zawiera już dane', en: 'Session already has data' },
+  merge_info: { pl: 'Masz {existing} segmentów. Chcesz dodać {new} nowych czy zastąpić istniejące?', en: 'You have {existing} segments. Add {new} new ones or replace existing?' },
+  merge_add: { pl: 'Dodaj do sesji', en: 'Add to session' },
+  merge_replace: { pl: 'Zastąp', en: 'Replace' },
+  merge_cancel: { pl: 'Anuluj', en: 'Cancel' },
+  merge_done: { pl: 'Dodano segmenty', en: 'Segments added' },
 };
 
 function t(key) {

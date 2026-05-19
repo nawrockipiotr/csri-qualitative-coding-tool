@@ -50,6 +50,10 @@ let state = {
   codebook: {},
   themes: {},
   dimensions: {},
+  _themeAuditTrail: null,
+  _abductionStats: null,
+  _driftWarnings: [],
+  _dimensionGroundings: {},
 };
 
 // ─── Provider config (same as Transcript Tool) ───
@@ -219,9 +223,260 @@ function renderPreview() {
     const speaker = s.author ? `<strong>${escapeHtml(s.author)}:</strong> ` : '';
     const raw = s.text_primary.length > 200 ? s.text_primary.substring(0, 200) + '...' : s.text_primary;
     const text = escapeHtml(raw);
-    return `<div class="preview-segment"><span class="seg-id">${s.segment_id}</span> ${speaker}${text}</div>`;
+    const fileBadge = s.source_file ? ` <span class="file-ext" style="margin-left:0.3rem">${escapeHtml(s.source_file)}</span>` : '';
+    return `<div class="preview-segment"><span class="seg-id">${s.segment_id}</span>${fileBadge} ${speaker}${text}</div>`;
   }).join('');
   el.innerHTML = `<div class="preview-header">${t('parse_preview')} (${Math.min(5, state.segments.length)} ${t('parse_of')} ${state.segments.length}):</div>${preview}`;
+}
+
+// ─── File drag & drop ───
+let pendingFiles = []; // { name, ext, segments[] }
+
+(function initDropZone() {
+  const dz = document.getElementById('dropZone');
+  const fi = document.getElementById('fileInput');
+  if (!dz || !fi) return;
+
+  dz.addEventListener('click', () => fi.click());
+  dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fi.click(); } });
+
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  fi.addEventListener('change', () => { if (fi.files.length) handleFiles(fi.files); fi.value = ''; });
+})();
+
+async function handleFiles(fileList) {
+  const files = Array.from(fileList);
+  const supported = files.filter(f => /\.(txt|json|csv|docx)$/i.test(f.name));
+  if (!supported.length) { showError(t('drop_unsupported')); return; }
+
+  showStatus(`${t('drop_processing')} ${supported.length} ${supported.length === 1 ? t('drop_file') : t('drop_files')}...`);
+
+  for (const file of supported) {
+    try {
+      const ext = file.name.split('.').pop().toLowerCase();
+      let segments = [];
+
+      if (ext === 'json') {
+        const text = await file.text();
+        segments = parseJSONContent(text, file.name);
+      } else if (ext === 'txt') {
+        const text = await file.text();
+        segments = parseTXTContent(text, file.name);
+      } else if (ext === 'csv') {
+        const text = await file.text();
+        segments = parseCSVContent(text, file.name);
+      } else if (ext === 'docx') {
+        segments = await parseDOCXContent(file);
+      }
+
+      if (segments.length) {
+        pendingFiles.push({ name: file.name, ext, segments });
+      }
+    } catch (err) {
+      console.error(`Error parsing ${file.name}:`, err);
+      showError(`${file.name}: ${err.message}`);
+    }
+  }
+
+  renderFileList();
+
+  // Check if we should show merge dialog or just apply
+  if (state.segments.length > 0 && pendingFiles.length > 0) {
+    showMergeDialog();
+  } else {
+    applyPendingFiles('replace');
+  }
+}
+
+function parseJSONContent(text, filename) {
+  const parsed = JSON.parse(text);
+  if (!Array.isArray(parsed) || !parsed.length) return [];
+
+  if (parsed[0].segment_id && parsed[0].text_primary) {
+    // Native format — add source_file
+    return parsed.map(s => ({ ...s, source_file: filename }));
+  }
+  // Generic JSON array
+  return parsed.map((item, i) => ({
+    segment_id: `${filePrefix(filename)}${String(i + 1).padStart(4, '0')}`,
+    text_primary: item.text || item.content || JSON.stringify(item),
+    author: item.author || item.speaker || '',
+    source_file: filename
+  }));
+}
+
+function parseTXTContent(text, filename) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+
+  const hasSpeakers = lines.slice(0, 10).some(l => l.indexOf(':') > 0 && l.indexOf(':') < 30);
+  const prefix = filePrefix(filename);
+  const segments = [];
+
+  if (hasSpeakers) {
+    let speaker = '', buf = [], id = 0;
+    for (const line of lines) {
+      const ci = line.indexOf(':');
+      if (ci > 0 && ci < 30) {
+        if (buf.length) { id++; segments.push({ segment_id: `${prefix}${String(id).padStart(4, '0')}`, text_primary: buf.join(' '), author: speaker, source_file: filename }); }
+        speaker = line.substring(0, ci).trim();
+        buf = [line.substring(ci + 1).trim()].filter(Boolean);
+      } else { buf.push(line.trim()); }
+    }
+    if (buf.length) { id++; segments.push({ segment_id: `${prefix}${String(id).padStart(4, '0')}`, text_primary: buf.join(' '), author: speaker, source_file: filename }); }
+  } else {
+    const paras = text.split(/\n\s*\n/).filter(p => p.trim());
+    const items = paras.length >= 3 ? paras : lines;
+    items.forEach((p, i) => {
+      segments.push({ segment_id: `${prefix}${String(i + 1).padStart(4, '0')}`, text_primary: p.trim(), author: '', source_file: filename });
+    });
+  }
+  return segments;
+}
+
+function parseCSVContent(text, filename) {
+  const lines = text.replace(/^﻿/, '').split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const header = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
+  const textCol = header.findIndex(h => ['text', 'text_primary', 'content', 'tekst', 'treść'].includes(h));
+  const idCol = header.findIndex(h => ['segment_id', 'id', 'nr'].includes(h));
+  const authorCol = header.findIndex(h => ['author', 'speaker', 'autor', 'rozmówca'].includes(h));
+
+  if (textCol === -1) return []; // no text column found
+
+  const prefix = filePrefix(filename);
+  return lines.slice(1).map((line, i) => {
+    const cols = parseCSVRow(line);
+    return {
+      segment_id: idCol >= 0 && cols[idCol] ? cols[idCol] : `${prefix}${String(i + 1).padStart(4, '0')}`,
+      text_primary: cols[textCol] || '',
+      author: authorCol >= 0 ? (cols[authorCol] || '') : '',
+      source_file: filename
+    };
+  }).filter(s => s.text_primary.trim());
+}
+
+function parseCSVRow(line) {
+  const result = [];
+  let current = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { result.push(current); current = ''; }
+      else current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+async function parseDOCXContent(file) {
+  if (typeof mammoth === 'undefined') { showError('mammoth.js not loaded'); return []; }
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer });
+  const text = result.value;
+  return parseTXTContent(text, file.name);
+}
+
+function filePrefix(filename) {
+  // E.g. "interview_01.txt" → "I01_"
+  const base = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '').substring(0, 6).toUpperCase();
+  return base ? `${base}_` : 'S';
+}
+
+function renderFileList() {
+  const el = document.getElementById('fileList');
+  if (!pendingFiles.length) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = pendingFiles.map((f, i) => `
+    <span class="file-badge">
+      <span class="file-ext">${f.ext}</span>
+      ${escapeHtml(f.name)} (${f.segments.length})
+      <span class="file-remove" onclick="removePendingFile(${i})" title="${t('drop_remove')}">×</span>
+    </span>
+  `).join('');
+}
+
+function removePendingFile(idx) {
+  pendingFiles.splice(idx, 1);
+  renderFileList();
+  if (!pendingFiles.length) {
+    document.getElementById('mergeDialog')?.remove();
+  }
+}
+
+function showMergeDialog() {
+  // Remove existing dialog
+  document.getElementById('mergeDialog')?.remove();
+
+  const totalNew = pendingFiles.reduce((s, f) => s + f.segments.length, 0);
+  const div = document.createElement('div');
+  div.id = 'mergeDialog';
+  div.className = 'merge-dialog';
+  div.innerHTML = `
+    <div class="merge-dialog-title">${t('merge_title')}</div>
+    <div class="merge-dialog-info">${t('merge_info').replace('{existing}', state.segments.length).replace('{new}', totalNew)}</div>
+    <div class="merge-dialog-btns">
+      <button class="action-btn" onclick="applyPendingFiles('merge')">${t('merge_add')}</button>
+      <button class="action-btn secondary" onclick="applyPendingFiles('replace')">${t('merge_replace')}</button>
+      <button class="action-btn secondary" onclick="cancelMerge()">${t('merge_cancel')}</button>
+    </div>
+  `;
+  document.getElementById('previewArea').before(div);
+}
+
+function cancelMerge() {
+  pendingFiles = [];
+  renderFileList();
+  document.getElementById('mergeDialog')?.remove();
+}
+
+function applyPendingFiles(mode) {
+  if (!pendingFiles.length) return;
+
+  const newSegments = pendingFiles.flatMap(f => f.segments);
+
+  if (mode === 'merge') {
+    // Ensure unique segment IDs
+    const existingIds = new Set(state.segments.map(s => s.segment_id));
+    for (const seg of newSegments) {
+      if (existingIds.has(seg.segment_id)) {
+        let suffix = 2;
+        while (existingIds.has(`${seg.segment_id}_${suffix}`)) suffix++;
+        seg.segment_id = `${seg.segment_id}_${suffix}`;
+      }
+      existingIds.add(seg.segment_id);
+    }
+    state.segments = state.segments.concat(newSegments);
+    showStatus(`${t('merge_done')} +${newSegments.length} → ${state.segments.length} ${t('parse_segments')}`);
+  } else {
+    state.segments = newSegments;
+    // Clear coded data on replace
+    state.codedRecords = [];
+    state.codebook = {};
+    state.themes = {};
+    state.dimensions = {};
+    state.currentIdx = 0;
+    showStatus(`${t('drop_loaded')} ${newSegments.length} ${t('parse_segments')} (${pendingFiles.length} ${pendingFiles.length === 1 ? t('drop_file') : t('drop_files')})`);
+  }
+
+  pendingFiles = [];
+  renderFileList();
+  document.getElementById('mergeDialog')?.remove();
+  renderPreview();
 }
 
 function confirmSetup() {
@@ -326,6 +581,7 @@ function renderCodingView() {
       <div class="segment-meta">
         <span class="seg-id">${seg.segment_id}</span>
         ${seg.author ? `<span class="seg-author">${escapeHtml(seg.author)}</span>` : ''}
+        ${seg.source_file ? `<span class="file-ext" style="margin-left:0.3rem">${escapeHtml(seg.source_file)}</span>` : ''}
       </div>
       <div class="segment-text">${escapeHtml(seg.text_primary)}</div>
     </div>
@@ -392,6 +648,7 @@ function saveInductiveCode() {
   const record = {
     segment_id: seg.segment_id,
     source_type: state.sourceType,
+    source_file: seg.source_file || '',
     text_primary: seg.text_primary,
     author: seg.author || '',
     first_order_code: code,
@@ -427,7 +684,8 @@ async function getCounterProposal() {
     abortController = new AbortController();
     const existingCodes = Object.keys(state.codebook);
     const systemPrompt = getCounterProposalPrompt(state.codingLang, state.researchQuestion, existingCodes);
-    const userPrompt = `Fragment: ${seg.text_primary}\nKod badacza: ${code}`;
+    const context = buildContextWindow(state.segments, state.currentIdx);
+    const userPrompt = `Fragment: ${seg.text_primary}\nKod badacza: ${code}${context}`;
     const response = await callAIWithRetry(apiKey, systemPrompt, userPrompt);
 
     // Parse response
@@ -480,6 +738,7 @@ function saveCounterDecision(researcherCode, toolProposal) {
   const record = {
     segment_id: seg.segment_id,
     source_type: state.sourceType,
+    source_file: seg.source_file || '',
     text_primary: seg.text_primary,
     author: seg.author || '',
     first_order_code: finalCode,
@@ -513,7 +772,8 @@ async function getAssistedProposal() {
     abortController = new AbortController();
     const existingCodes = Object.keys(state.codebook);
     const systemPrompt = getAssistedProposalPrompt(state.codingLang, state.researchQuestion, state.framework, existingCodes);
-    const response = await callAIWithRetry(apiKey, systemPrompt, `Fragment: ${seg.text_primary}`);
+    const context = buildContextWindow(state.segments, state.currentIdx);
+    const response = await callAIWithRetry(apiKey, systemPrompt, `Fragment: ${seg.text_primary}${context}`);
 
     let proposedCode = '', proposedType = 'descriptive', justification = '';
     for (const line of response.split('\n')) {
@@ -564,6 +824,7 @@ function saveAssistedDecision(proposedCode, proposedType) {
   const record = {
     segment_id: seg.segment_id,
     source_type: state.sourceType,
+    source_file: seg.source_file || '',
     text_primary: seg.text_primary,
     author: seg.author || '',
     first_order_code: finalCode,
@@ -663,7 +924,10 @@ async function runAutoCoding() {
       abortController = new AbortController();
       const existingCodes = Object.keys(state.codebook);
       const systemPrompt = getAutoCodePrompt(state.codingLang, state.researchQuestion, state.framework, existingCodes);
-      const response = await callAIWithRetry(apiKey, systemPrompt, `Fragment: ${seg.text_primary}`);
+      // Find original index in full segments array for context window
+      const origIdx = state.segments.findIndex(s => s.segment_id === seg.segment_id);
+      const context = buildContextWindow(state.segments, origIdx);
+      const response = await callAIWithRetry(apiKey, systemPrompt, `Fragment: ${seg.text_primary}${context}`);
 
       let proposedCode = '', proposedType = 'descriptive', justification = '';
       for (const line of response.split('\n')) {
@@ -682,6 +946,7 @@ async function runAutoCoding() {
       const record = {
         segment_id: seg.segment_id,
         source_type: state.sourceType,
+        source_file: seg.source_file || '',
         text_primary: seg.text_primary,
         author: seg.author || '',
         first_order_code: proposedCode,
@@ -698,7 +963,11 @@ async function runAutoCoding() {
       };
 
       saveRecord(record, true);
-      if ((i + 1) % 10 === 0) saveSession(); // batch persist every 10
+      if ((i + 1) % 10 === 0) {
+        saveSession();
+        // Batch drift check every 10 segments
+        if (!autoCancelled) await runBatchDriftCheck(apiKey, i);
+      }
     } catch (err) {
       if (err.name === 'AbortError' || autoCancelled) break;
       console.error(`Auto-coding error on ${seg.segment_id}:`, err.message);
@@ -709,57 +978,240 @@ async function runAutoCoding() {
 
   if (autoCancelled) { autoRunning = false; renderCodingView(); return; }
 
-  // Phase 2: Generate themes
+  // Saturation check before theme generation
+  const satWarning = checkSaturation();
+  if (satWarning) {
+    const statusEl = document.getElementById('autoStatus');
+    if (statusEl) statusEl.innerHTML += `<div class="guided-box guided-warn" style="margin:0.5rem 0">
+      <div class="guided-title"><i data-lucide="alert-triangle" class="icon-sm"></i> ${t('sat_warning_title')}</div>
+      <p>${satWarning}</p>
+    </div>`;
+  }
+
+  // Phase 2: Generate themes (multi-pass: generate → critique → revise)
   await autoGenerateThemes(apiKey);
   if (autoCancelled) { autoRunning = false; renderCodingView(); return; }
 
-  // Phase 3: Generate dimensions
+  // Phase 3: Abduction loop — re-examine codes in light of themes
+  await runAbductionLoop(apiKey);
+  if (autoCancelled) { autoRunning = false; renderCodingView(); return; }
+
+  // Phase 4: Generate dimensions (theoretically grounded)
   await autoGenerateDimensions(apiKey);
 
-  // Phase 4: Show results — switch to visualization
+  // Phase 5: Show results — switch to visualization
   autoRunning = false;
   saveSession();
   showView('visualization');
 }
 
+// ─── Batch drift check (constant comparison) ───
+async function runBatchDriftCheck(apiKey, batchEndIdx) {
+  const batch = state.codedRecords.slice(-10);
+  if (batch.length < 5) return; // too few for meaningful comparison
+
+  const statusEl = document.getElementById('autoStatus');
+  const prevHtml = statusEl ? statusEl.innerHTML : '';
+
+  try {
+    abortController = new AbortController();
+    const batchDesc = batch.map(r => `[${r.segment_id}] (code: ${r.first_order_code}): ${r.text_primary.substring(0, 150)}`).join('\n');
+    const systemPrompt = getBatchDriftCheckPrompt(state.codingLang);
+    const response = await callAIWithRetry(apiKey, systemPrompt, batchDesc);
+
+    // Parse drift results and store as warnings
+    if (!response.toUpperCase().includes('CONSISTENT:')) {
+      const drifts = [];
+      for (const line of response.split('\n')) {
+        if (line.toUpperCase().startsWith('DRIFT:')) drifts.push(line);
+      }
+      if (drifts.length) {
+        if (!state._driftWarnings) state._driftWarnings = [];
+        state._driftWarnings.push({ batch: batchEndIdx, drifts, full: response });
+        console.log(`Drift check (batch ending at ${batchEndIdx}): ${drifts.length} issues found`);
+      }
+    }
+  } catch (err) {
+    console.error('Drift check error:', err.message);
+  }
+  // Restore previous status display
+  if (statusEl) statusEl.innerHTML = prevHtml;
+}
+
+// ─── Saturation check ───
+function checkSaturation() {
+  const records = state.codedRecords;
+  if (records.length < 20) return null;
+
+  const last10 = records.slice(-10);
+  const beforeLast10 = new Set(records.slice(0, -10).map(r => r.first_order_code));
+  const newCodesInLast10 = last10.filter(r => !beforeLast10.has(r.first_order_code)).length;
+
+  if (newCodesInLast10 > 1) {
+    return t('sat_warning_text').replace('{n}', newCodesInLast10);
+  }
+  return null;
+}
+
+// ─── Multi-pass theme generation ───
+function parseThemesResponse(response) {
+  const themes = {};
+  const lines = response.split('\n');
+  let currentTheme = '';
+  for (const line of lines) {
+    if (line.toUpperCase().startsWith('THEME:') || line.toUpperCase().startsWith('TEMAT:')) {
+      currentTheme = line.split(':').slice(1).join(':').trim();
+    } else if ((line.toUpperCase().startsWith('CODES:') || line.toUpperCase().startsWith('KODY:')) && currentTheme) {
+      const allCodeNames = Object.keys(state.codebook);
+      const themeCodes = line.split(':').slice(1).join(':').split(',').map(c => c.trim()).map(c => {
+        if (state.codebook[c]) return c;
+        return allCodeNames.find(k => k.toLowerCase() === c.toLowerCase()) || null;
+      }).filter(Boolean);
+      if (themeCodes.length) themes[currentTheme] = themeCodes;
+      currentTheme = '';
+    }
+  }
+  return themes;
+}
+
 async function autoGenerateThemes(apiKey) {
   const statusEl = document.getElementById('autoStatus');
+  const codes = Object.entries(state.codebook).filter(([, v]) => v.frequency > 0).sort((a, b) => b[1].frequency - a[1].frequency);
+  if (!codes.length) return;
+
+  // Pass 1: Generate initial themes
   if (statusEl) statusEl.innerHTML = `
     <div class="auto-progress-bar">
-      <div class="api-spinner-wrap"><span class="api-spinner"></span> <span>${t('auto_themes_progress')}</span></div>
+      <div class="api-spinner-wrap"><span class="api-spinner"></span> <span>${t('auto_themes_pass1')}</span></div>
       <button class="action-btn secondary" onclick="autoCancelled=true">${t('auto_cancel')}</button>
     </div>`;
 
   try {
     abortController = new AbortController();
-    const codes = Object.entries(state.codebook).filter(([, v]) => v.frequency > 0).sort((a, b) => b[1].frequency - a[1].frequency);
     const systemPrompt = getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes);
-    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate second-order themes from these ${codes.length} first-order codes.`);
+    const pass1Response = await callAIWithRetry(apiKey, systemPrompt, `Generate second-order themes from these ${codes.length} first-order codes.`);
+    const pass1Themes = parseThemesResponse(pass1Response);
 
-    // Parse THEME: / CODES: pairs
-    const lines = response.split('\n');
-    let currentTheme = '';
-    for (const line of lines) {
-      if (line.toUpperCase().startsWith('THEME:') || line.toUpperCase().startsWith('TEMAT:')) {
-        currentTheme = line.split(':').slice(1).join(':').trim();
-      } else if ((line.toUpperCase().startsWith('CODES:') || line.toUpperCase().startsWith('KODY:')) && currentTheme) {
-        const allCodeNames = Object.keys(state.codebook);
-        const themeCodes = line.split(':').slice(1).join(':').split(',').map(c => c.trim()).map(c => {
-          if (state.codebook[c]) return c;
-          // Fuzzy: find closest match (case-insensitive, trimmed)
-          return allCodeNames.find(k => k.toLowerCase() === c.toLowerCase()) || null;
-        }).filter(Boolean);
-        if (themeCodes.length) {
-          state.themes[currentTheme] = themeCodes;
-        }
-        currentTheme = '';
-      }
+    if (!Object.keys(pass1Themes).length) { console.error('Pass 1: no themes generated'); return; }
+    if (autoCancelled) return;
+
+    // Pass 2: Critique
+    if (statusEl) statusEl.innerHTML = `
+      <div class="auto-progress-bar">
+        <div class="api-spinner-wrap"><span class="api-spinner"></span> <span>${t('auto_themes_pass2')}</span></div>
+        <button class="action-btn secondary" onclick="autoCancelled=true">${t('auto_cancel')}</button>
+      </div>`;
+
+    abortController = new AbortController();
+    const critiquePrompt = getThemeCritiquePrompt(state.codingLang, state.researchQuestion, pass1Themes, codes);
+    const critiqueResponse = await callAIWithRetry(apiKey, critiquePrompt, `Critique the proposed theme structure.`);
+
+    if (autoCancelled) return;
+
+    // If critique says PASS — use pass1 themes
+    if (critiqueResponse.toUpperCase().includes('PASS:')) {
+      state.themes = pass1Themes;
+      state._themeAuditTrail = { pass1: pass1Themes, critique: 'PASS', pass3: null };
+      return;
     }
+
+    // Pass 3: Revise based on critique
+    if (statusEl) statusEl.innerHTML = `
+      <div class="auto-progress-bar">
+        <div class="api-spinner-wrap"><span class="api-spinner"></span> <span>${t('auto_themes_pass3')}</span></div>
+        <button class="action-btn secondary" onclick="autoCancelled=true">${t('auto_cancel')}</button>
+      </div>`;
+
+    abortController = new AbortController();
+    const revisionPrompt = getThemeRevisionPrompt(state.codingLang, state.researchQuestion, pass1Themes, critiqueResponse, codes);
+    const pass3Response = await callAIWithRetry(apiKey, revisionPrompt, `Revise themes based on the critique.`);
+    const pass3Themes = parseThemesResponse(pass3Response);
+
+    // Use revised themes if valid, otherwise fall back to pass1
+    state.themes = Object.keys(pass3Themes).length ? pass3Themes : pass1Themes;
+    state._themeAuditTrail = { pass1: pass1Themes, critique: critiqueResponse, pass3: pass3Themes };
+
   } catch (err) {
     console.error('Auto themes error:', err.message);
   }
 }
 
+// ─── Abduction loop — re-coding after themes ───
+async function runAbductionLoop(apiKey) {
+  if (!Object.keys(state.themes).length) return;
+
+  const statusEl = document.getElementById('autoStatus');
+  const records = state.codedRecords;
+  let recoded = 0, orphans = 0;
+
+  for (let i = 0; i < records.length; i++) {
+    if (autoCancelled) break;
+
+    const r = records[i];
+    if (statusEl) statusEl.innerHTML = `
+      <div class="auto-progress-bar">
+        <div class="api-spinner-wrap"><span class="api-spinner"></span> <span>${t('auto_abduction_progress')} ${i + 1}/${records.length}</span></div>
+        <button class="action-btn secondary" onclick="autoCancelled=true">${t('auto_cancel')}</button>
+      </div>`;
+
+    try {
+      abortController = new AbortController();
+      const systemPrompt = getAbductionCheckPrompt(state.codingLang, state.researchQuestion, state.themes);
+      const origIdx = state.segments.findIndex(s => s.segment_id === r.segment_id);
+      const context = buildContextWindow(state.segments, origIdx);
+      const userMsg = `Segment: ${r.segment_id}\nCurrent code: ${r.first_order_code} (${r.code_type})\nText: ${r.text_primary}${context}`;
+      const response = await callAIWithRetry(apiKey, systemPrompt, userMsg);
+
+      // Parse verdict
+      let verdict = 'KEEP', newCode = '', newType = '', reason = '';
+      for (const line of response.split('\n')) {
+        if (line.toUpperCase().startsWith('VERDICT:'))
+          verdict = line.split(':').slice(1).join(':').trim().toUpperCase();
+        if (line.toUpperCase().startsWith('NEW_CODE:'))
+          newCode = line.split(':').slice(1).join(':').trim();
+        if (line.toUpperCase().startsWith('NEW_TYPE:')) {
+          const tp = line.split(':').slice(1).join(':').trim().toLowerCase();
+          if (['descriptive', 'in_vivo', 'process'].includes(tp)) newType = tp;
+        }
+        if (line.toUpperCase().startsWith('REASON:'))
+          reason = line.split(':').slice(1).join(':').trim();
+      }
+
+      if (verdict === 'RECODE' && newCode) {
+        const oldCode = r.first_order_code;
+        r.first_order_code = newCode;
+        if (newType) r.code_type = newType;
+        r.cycle = (r.cycle || 1) + 1;
+        r.notes = (r.notes || '') + ` [abduction: ${oldCode} → ${newCode}: ${reason}]`;
+
+        // Update frequencies
+        if (oldCode !== newCode) {
+          if (state.codebook[oldCode]) {
+            state.codebook[oldCode].frequency--;
+            if (state.codebook[oldCode].frequency <= 0) delete state.codebook[oldCode];
+          }
+          registerCode(newCode, newType || r.code_type);
+        }
+        recoded++;
+      } else if (verdict === 'ORPHAN') {
+        r.notes = (r.notes || '') + ` [abduction: ORPHAN — ${reason}]`;
+        orphans++;
+      }
+
+      // Batch persist
+      if ((i + 1) % 10 === 0) saveSession();
+    } catch (err) {
+      if (err.name === 'AbortError' || autoCancelled) break;
+      console.error(`Abduction error on ${r.segment_id}:`, err.message);
+    }
+  }
+
+  saveSession();
+  state._abductionStats = { recoded, orphans, total: records.length };
+  console.log(`Abduction loop: ${recoded} recoded, ${orphans} orphans out of ${records.length}`);
+}
+
+// ─── Theoretically grounded dimensions ───
 async function autoGenerateDimensions(apiKey) {
   if (!Object.keys(state.themes).length) return;
 
@@ -772,14 +1224,21 @@ async function autoGenerateDimensions(apiKey) {
 
   try {
     abortController = new AbortController();
-    const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes);
+    const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes, state.framework);
     const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
 
     const lines = response.split('\n');
     let currentDim = '';
+    let currentGrounding = '';
     for (const line of lines) {
       if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
+        // Save previous dimension if pending
+        if (currentDim && state.dimensions[currentDim]) {
+          state._dimensionGroundings = state._dimensionGroundings || {};
+          state._dimensionGroundings[currentDim] = currentGrounding;
+        }
         currentDim = line.split(':').slice(1).join(':').trim();
+        currentGrounding = '';
       } else if ((line.toUpperCase().startsWith('THEMES:') || line.toUpperCase().startsWith('TEMATY:')) && currentDim) {
         const allThemeNames = Object.keys(state.themes);
         const dimThemes = line.split(':').slice(1).join(':').split(',').map(th => th.trim()).map(th => {
@@ -789,8 +1248,14 @@ async function autoGenerateDimensions(apiKey) {
         if (dimThemes.length) {
           state.dimensions[currentDim] = dimThemes;
         }
-        currentDim = '';
+      } else if ((line.toUpperCase().startsWith('GROUNDING:') || line.toUpperCase().startsWith('UZASADNIENIE:')) && currentDim) {
+        currentGrounding = line.split(':').slice(1).join(':').trim();
       }
+    }
+    // Save last dimension grounding
+    if (currentDim && state.dimensions[currentDim]) {
+      state._dimensionGroundings = state._dimensionGroundings || {};
+      state._dimensionGroundings[currentDim] = currentGrounding;
     }
   } catch (err) {
     console.error('Auto dimensions error:', err.message);
@@ -1102,7 +1567,7 @@ async function suggestConsolidation() {
   }
 }
 
-// ─── AI generation (standalone — available in all modes) ───
+// ─── AI generation (standalone — available in all modes, uses multi-pass) ───
 async function generateThemesAI() {
   const apiKey = document.getElementById('apiKey').value;
   if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
@@ -1111,40 +1576,37 @@ async function generateThemesAI() {
   if (codes.length < 3) { showError(t('gen_themes_min')); return; }
 
   const el = document.getElementById('aiThemesResult');
-  if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_progress')}</div>`;
 
   try {
+    // Pass 1
+    if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_pass1')}</div>`;
     abortController = new AbortController();
-    const systemPrompt = getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes);
-    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate second-order themes from these ${codes.length} first-order codes.`);
+    const pass1Response = await callAIWithRetry(apiKey, getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes), `Generate second-order themes from these ${codes.length} first-order codes.`);
+    const pass1Themes = parseThemesResponse(pass1Response);
+    if (!Object.keys(pass1Themes).length) { if (el) el.innerHTML = `<div class="error-msg">${t('gen_themes_fail')}</div>`; return; }
 
-    // Parse THEME: / CODES: pairs
-    const lines = response.split('\n');
-    let currentTheme = '';
-    const newThemes = {};
-    for (const line of lines) {
-      if (line.toUpperCase().startsWith('THEME:') || line.toUpperCase().startsWith('TEMAT:')) {
-        currentTheme = line.split(':').slice(1).join(':').trim();
-      } else if ((line.toUpperCase().startsWith('CODES:') || line.toUpperCase().startsWith('KODY:')) && currentTheme) {
-        const allCodeNames = Object.keys(state.codebook);
-        const themeCodes = line.split(':').slice(1).join(':').split(',').map(c => c.trim()).map(c => {
-          if (state.codebook[c]) return c;
-          return allCodeNames.find(k => k.toLowerCase() === c.toLowerCase()) || null;
-        }).filter(Boolean);
-        if (themeCodes.length) newThemes[currentTheme] = themeCodes;
-        currentTheme = '';
-      }
-    }
+    // Pass 2: Critique
+    if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_pass2')}</div>`;
+    abortController = new AbortController();
+    const critiqueResponse = await callAIWithRetry(apiKey, getThemeCritiquePrompt(state.codingLang, state.researchQuestion, pass1Themes, codes), `Critique the proposed theme structure.`);
 
-    if (Object.keys(newThemes).length) {
-      state.themes = newThemes;
-      saveSession();
-      if (currentView === 'codebook') renderCodebookView();
-      else if (currentView === 'visualization') renderVisualizationView();
-      if (el) el.innerHTML = `<div class="status-msg">${t('gen_themes_done')} ${Object.keys(newThemes).length}</div>`;
+    if (critiqueResponse.toUpperCase().includes('PASS:')) {
+      state.themes = pass1Themes;
+      state._themeAuditTrail = { pass1: pass1Themes, critique: 'PASS', pass3: null };
     } else {
-      if (el) el.innerHTML = `<div class="error-msg">${t('gen_themes_fail')}</div>`;
+      // Pass 3: Revise
+      if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_pass3')}</div>`;
+      abortController = new AbortController();
+      const pass3Response = await callAIWithRetry(apiKey, getThemeRevisionPrompt(state.codingLang, state.researchQuestion, pass1Themes, critiqueResponse, codes), `Revise themes based on the critique.`);
+      const pass3Themes = parseThemesResponse(pass3Response);
+      state.themes = Object.keys(pass3Themes).length ? pass3Themes : pass1Themes;
+      state._themeAuditTrail = { pass1: pass1Themes, critique: critiqueResponse, pass3: pass3Themes };
     }
+
+    saveSession();
+    if (currentView === 'codebook') renderCodebookView();
+    else if (currentView === 'visualization') renderVisualizationView();
+    if (el) el.innerHTML = `<div class="status-msg">${t('gen_themes_done')} ${Object.keys(state.themes).length}</div>`;
   } catch (err) {
     if (el) el.innerHTML = `<div class="error-msg">${err.message}</div>`;
   }
@@ -1161,12 +1623,13 @@ async function generateDimensionsAI() {
 
   try {
     abortController = new AbortController();
-    const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes);
+    const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes, state.framework);
     const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
 
+    const newDims = {};
+    const groundings = {};
     const lines = response.split('\n');
     let currentDim = '';
-    const newDims = {};
     for (const line of lines) {
       if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
         currentDim = line.split(':').slice(1).join(':').trim();
@@ -1177,12 +1640,14 @@ async function generateDimensionsAI() {
           return allThemeNames.find(k => k.toLowerCase() === th.toLowerCase()) || null;
         }).filter(Boolean);
         if (dimThemes.length) newDims[currentDim] = dimThemes;
-        currentDim = '';
+      } else if ((line.toUpperCase().startsWith('GROUNDING:') || line.toUpperCase().startsWith('UZASADNIENIE:')) && currentDim) {
+        groundings[currentDim] = line.split(':').slice(1).join(':').trim();
       }
     }
 
     if (Object.keys(newDims).length) {
       state.dimensions = newDims;
+      state._dimensionGroundings = groundings;
       saveSession();
       if (currentView === 'codebook') renderCodebookView();
       else if (currentView === 'visualization') renderVisualizationView();
@@ -1257,6 +1722,34 @@ function renderVisualizationView() {
       ${noDims ? `<div style="margin-top:0.75rem"><button class="action-btn" onclick="generateDimensionsAI()"><i data-lucide="sparkles" class="icon-sm"></i> ${t('gen_dims_btn')}</button><div id="aiDimsResult"></div></div>` : ''}`;
   }
 
+  // Dimension groundings
+  let groundingHtml = '';
+  if (state._dimensionGroundings && Object.keys(state._dimensionGroundings).length) {
+    groundingHtml = `<h3>${t('viz_grounding')}</h3><div class="diag-grid">` +
+      Object.entries(state._dimensionGroundings).map(([dim, g]) =>
+        `<div class="diag-item diag-info"><strong>${escapeHtml(dim)}:</strong> ${escapeHtml(g)}</div>`
+      ).join('') + `</div>`;
+  }
+
+  // Abduction stats
+  let abductionHtml = '';
+  if (state._abductionStats) {
+    const s = state._abductionStats;
+    abductionHtml = `<h3>${t('viz_abduction_stats')}</h3><div class="diag-grid">
+      <div class="diag-item diag-${s.recoded > 0 ? 'warn' : 'ok'}">${t('viz_recoded')}: ${s.recoded}/${s.total}</div>
+      <div class="diag-item diag-${s.orphans > 0 ? 'error' : 'ok'}">${t('viz_orphans')}: ${s.orphans}</div>
+    </div>`;
+  }
+
+  // Drift warnings
+  let driftHtml = '';
+  if (state._driftWarnings && state._driftWarnings.length) {
+    driftHtml = `<h3>${t('viz_drift_warnings')}</h3><div class="diag-grid">` +
+      state._driftWarnings.map(w =>
+        `<div class="diag-item diag-warn"><strong>${t('viz_drift_batch')} ${w.batch}:</strong> ${w.drifts.map(d => escapeHtml(d)).join('<br>')}</div>`
+      ).join('') + `</div>`;
+  }
+
   panel.innerHTML = `
     <h3>${t('viz_diagnostics')}</h3>
     <div class="diag-grid">
@@ -1264,8 +1757,11 @@ function renderVisualizationView() {
       <div class="diag-item diag-${overloadStatus}">${t('viz_overloaded')} ${overloaded.length}${overloaded.length ? ' — ' + overloaded.map(([c]) => c).join(', ') : ''}</div>
       ${satHtml}
     </div>
+    ${abductionHtml}
+    ${driftHtml}
     <h3>${t('viz_gioia')}</h3>
     ${gioiaHtml}
+    ${groundingHtml}
     <h3>${t('viz_freq')}</h3>
     <div class="code-bars">${Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c, i]) => {
       const w = Math.round(i.frequency / totalCoded * 100);
@@ -1357,6 +1853,6 @@ function restoreSession() {
 
 function dismissSession() {
   document.getElementById('sessionBar').style.display = 'none';
-  state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {} };
+  state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {} };
   localStorage.removeItem('coding_tool_session');
 }
