@@ -1240,12 +1240,57 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   margin-bottom: 0.75rem;
 }
 
+/* ═══ Pre-analysis briefing ═══ */
+.briefing-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.briefing-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.briefing-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.briefing-stat {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.briefing-stat strong {
+  color: var(--text);
+}
+.briefing-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.briefing-suggest {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.briefing-warn {
+  font-size: 0.85rem;
+  color: var(--yellow);
+  font-weight: 500;
+}
+
 /* ═══ Dark mode additions ═══ */
 .dark-mode .consolidation-card { background: var(--surface); }
 .dark-mode .grounding-card { background: var(--surface); }
 .dark-mode .grounding-edit-input { background: var(--surface2); color: var(--text); }
 .dark-mode .drift-seg { background: var(--surface2); }
 .dark-mode .codebook-filter { background: var(--surface2); color: var(--text); }
+.dark-mode .briefing-panel { background: var(--surface); }
 
 /* ═══ Responsive ═══ */
 @media (max-width: 600px) {

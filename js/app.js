@@ -267,14 +267,57 @@ function parseImportData() {
 function renderPreview() {
   const el = document.getElementById('previewArea');
   if (!state.segments.length) { el.innerHTML = ''; return; }
-  const preview = state.segments.slice(0, 5).map(s => {
+
+  // ─── Pre-analysis briefing ───
+  const segs = state.segments;
+  const n = segs.length;
+  const avgLen = Math.round(segs.reduce((s, seg) => s + seg.text_primary.length, 0) / n);
+  const authors = new Set(segs.map(s => s.author).filter(Boolean));
+  const files = new Set(segs.map(s => s.source_file).filter(Boolean));
+
+  // Suggest coding mode
+  const hasFramework = (document.getElementById('framework')?.value || '').trim().length > 0;
+  let suggestedMode, suggestedModeKey;
+  if (n > 200) {
+    suggestedMode = 'auto'; suggestedModeKey = 'briefing_suggest_auto';
+  } else if (hasFramework) {
+    suggestedMode = 'assisted'; suggestedModeKey = 'briefing_suggest_assisted';
+  } else {
+    suggestedMode = 'inductive'; suggestedModeKey = 'briefing_suggest_inductive';
+  }
+
+  // Suggest batch size
+  let suggestedBatch = 10;
+  if (n > 100) suggestedBatch = 15;
+  if (n > 300) suggestedBatch = 20;
+
+  const briefingHtml = `<div class="briefing-panel">
+    <div class="briefing-title"><i data-lucide="bar-chart-3" class="icon-sm"></i> ${t('briefing_title')}</div>
+    <div class="briefing-stats">
+      <span class="briefing-stat">${t('briefing_segments')}: <strong>${n}</strong></span>
+      <span class="briefing-stat">${t('briefing_avg_len')}: <strong>${avgLen} ${t('briefing_chars')}</strong></span>
+      ${authors.size ? `<span class="briefing-stat">${t('briefing_authors')}: <strong>${authors.size}</strong></span>` : ''}
+      ${files.size > 1 ? `<span class="briefing-stat">${t('briefing_files')}: <strong>${files.size}</strong></span>` : ''}
+    </div>
+    <div class="briefing-suggestions">
+      <div class="briefing-suggest">${t(suggestedModeKey)}</div>
+      <div class="briefing-suggest">${t('briefing_suggest_batch').replace('{n}', suggestedBatch)}</div>
+      ${avgLen < 50 ? `<div class="briefing-warn">${t('briefing_warn_short')}</div>` : ''}
+      ${avgLen > 2000 ? `<div class="briefing-warn">${t('briefing_warn_long')}</div>` : ''}
+    </div>
+  </div>`;
+
+  // ─── Segment preview ───
+  const preview = segs.slice(0, 5).map(s => {
     const speaker = s.author ? `<strong>${escapeHtml(s.author)}:</strong> ` : '';
     const raw = s.text_primary.length > 200 ? s.text_primary.substring(0, 200) + '...' : s.text_primary;
     const text = escapeHtml(raw);
     const fileBadge = s.source_file ? ` <span class="file-ext" style="margin-left:0.3rem">${escapeHtml(s.source_file)}</span>` : '';
     return `<div class="preview-segment"><span class="seg-id">${s.segment_id}</span>${fileBadge} ${speaker}${text}</div>`;
   }).join('');
-  el.innerHTML = `<div class="preview-header">${t('parse_preview')} (${Math.min(5, state.segments.length)} ${t('parse_of')} ${state.segments.length}):</div>${preview}`;
+
+  el.innerHTML = briefingHtml + `<div class="preview-header">${t('parse_preview')} (${Math.min(5, n)} ${t('parse_of')} ${n}):</div>${preview}`;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ─── File drag & drop ───
@@ -1166,6 +1209,14 @@ function parseDimensionsResponse(response) {
   if (currentDim && newDims[currentDim]) {
     groundings[currentDim] = { theory: currentTheory, author: currentAuthor, text: currentGrounding };
   }
+  // Validate: flag missing theory/author with placeholder
+  for (const dim of Object.keys(newDims)) {
+    if (!groundings[dim]) groundings[dim] = { theory: '', author: '', text: '' };
+    const g = groundings[dim];
+    if (!g.theory) g.theory = currentLang === 'pl' ? '⚠ uzupełnij teorię' : '⚠ add theory';
+    if (!g.author) g.author = currentLang === 'pl' ? '⚠ uzupełnij autorów' : '⚠ add authors';
+    if (!g.text) g.text = currentLang === 'pl' ? '⚠ uzupełnij uzasadnienie' : '⚠ add grounding';
+  }
   // Apply to state
   state.dimensions = newDims;
   state._dimensionGroundings = groundings;
@@ -1208,7 +1259,7 @@ async function autoGenerateThemes(apiKey) {
   try {
     abortController = new AbortController();
     const systemPrompt = getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes);
-    const pass1Response = await callAIWithRetry(apiKey, systemPrompt, `Generate second-order themes from these ${codes.length} first-order codes.`);
+    const pass1Response = await callAIWithRetry(apiKey, systemPrompt, `Generate second-order themes from these ${codes.length} first-order codes.`, 3, { temperature: 0 });
     const pass1Themes = parseThemesResponse(pass1Response);
 
     if (!Object.keys(pass1Themes).length) { console.error('Pass 1: no themes generated'); return; }
@@ -1223,7 +1274,7 @@ async function autoGenerateThemes(apiKey) {
 
     abortController = new AbortController();
     const critiquePrompt = getThemeCritiquePrompt(state.codingLang, state.researchQuestion, pass1Themes, codes);
-    const critiqueResponse = await callAIWithRetry(apiKey, critiquePrompt, `Critique the proposed theme structure.`);
+    const critiqueResponse = await callAIWithRetry(apiKey, critiquePrompt, `Critique the proposed theme structure.`, 3, { temperature: 0 });
 
     if (autoCancelled) return;
 
@@ -1243,7 +1294,7 @@ async function autoGenerateThemes(apiKey) {
 
     abortController = new AbortController();
     const revisionPrompt = getThemeRevisionPrompt(state.codingLang, state.researchQuestion, pass1Themes, critiqueResponse, codes);
-    const pass3Response = await callAIWithRetry(apiKey, revisionPrompt, `Revise themes based on the critique.`);
+    const pass3Response = await callAIWithRetry(apiKey, revisionPrompt, `Revise themes based on the critique.`, 3, { temperature: 0 });
     const pass3Themes = parseThemesResponse(pass3Response);
 
     // Use revised themes if valid, otherwise fall back to pass1
@@ -1344,7 +1395,7 @@ async function autoGenerateDimensions(apiKey) {
   try {
     abortController = new AbortController();
     const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes, state.framework);
-    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
+    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`, 3, { temperature: 0 });
 
     parseDimensionsResponse(response);
   } catch (err) {
@@ -1802,20 +1853,26 @@ async function generateThemesAI() {
   const codes = Object.entries(state.codebook).filter(([, v]) => v.frequency > 0).sort((a, b) => b[1].frequency - a[1].frequency);
   if (codes.length < 3) { showError(t('gen_themes_min')); return; }
 
+  // Confirm overwrite if themes already exist
+  if (Object.keys(state.themes).length > 0) {
+    if (!confirm(t('gen_themes_overwrite'))) return;
+  }
+  pushUndo('themes');
+
   const el = document.getElementById('aiThemesResult');
 
   try {
     // Pass 1
     if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_pass1')}</div>`;
     abortController = new AbortController();
-    const pass1Response = await callAIWithRetry(apiKey, getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes), `Generate second-order themes from these ${codes.length} first-order codes.`);
+    const pass1Response = await callAIWithRetry(apiKey, getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes), `Generate second-order themes from these ${codes.length} first-order codes.`, 3, { temperature: 0 });
     const pass1Themes = parseThemesResponse(pass1Response);
     if (!Object.keys(pass1Themes).length) { if (el) el.innerHTML = `<div class="error-msg">${t('gen_themes_fail')}</div>`; return; }
 
     // Pass 2: Critique
     if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_pass2')}</div>`;
     abortController = new AbortController();
-    const critiqueResponse = await callAIWithRetry(apiKey, getThemeCritiquePrompt(state.codingLang, state.researchQuestion, pass1Themes, codes), `Critique the proposed theme structure.`);
+    const critiqueResponse = await callAIWithRetry(apiKey, getThemeCritiquePrompt(state.codingLang, state.researchQuestion, pass1Themes, codes), `Critique the proposed theme structure.`, 3, { temperature: 0 });
 
     if (critiqueResponse.toUpperCase().includes('PASS:')) {
       state.themes = pass1Themes;
@@ -1824,7 +1881,7 @@ async function generateThemesAI() {
       // Pass 3: Revise
       if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_pass3')}</div>`;
       abortController = new AbortController();
-      const pass3Response = await callAIWithRetry(apiKey, getThemeRevisionPrompt(state.codingLang, state.researchQuestion, pass1Themes, critiqueResponse, codes), `Revise themes based on the critique.`);
+      const pass3Response = await callAIWithRetry(apiKey, getThemeRevisionPrompt(state.codingLang, state.researchQuestion, pass1Themes, critiqueResponse, codes), `Revise themes based on the critique.`, 3, { temperature: 0 });
       const pass3Themes = parseThemesResponse(pass3Response);
       state.themes = Object.keys(pass3Themes).length ? pass3Themes : pass1Themes;
       state._themeAuditTrail = { pass1: pass1Themes, critique: critiqueResponse, pass3: pass3Themes };
@@ -1845,13 +1902,19 @@ async function generateDimensionsAI() {
 
   if (Object.keys(state.themes).length < 2) { showError(t('gen_dims_min')); return; }
 
+  // Confirm overwrite if dimensions already exist
+  if (Object.keys(state.dimensions).length > 0) {
+    if (!confirm(t('gen_dims_overwrite'))) return;
+  }
+  pushUndo('dimensions');
+
   const el = document.getElementById('aiDimsResult');
   if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_dims_progress')}</div>`;
 
   try {
     abortController = new AbortController();
     const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes, state.framework);
-    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
+    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`, 3, { temperature: 0 });
 
     const newDims = parseDimensionsResponse(response);
 

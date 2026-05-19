@@ -515,6 +515,46 @@ const I18N = {
   auto_cost_estimate: { pl: 'Szacunkowy koszt', en: 'Estimated cost' },
   auto_cost_segments: { pl: 'segmentów × ~', en: 'segments × ~' },
   auto_cost_tokens: { pl: 'tokenów/segment', en: 'tokens/segment' },
+  // Overwrite confirmations
+  gen_themes_overwrite: {
+    pl: 'Tematy już istnieją. Wygenerować nowe? (poprzednie zostaną nadpisane — możesz cofnąć Ctrl+Z)',
+    en: 'Themes already exist. Generate new ones? (previous will be overwritten — you can undo with Ctrl+Z)'
+  },
+  gen_dims_overwrite: {
+    pl: 'Wymiary już istnieją. Wygenerować nowe? (poprzednie zostaną nadpisane — możesz cofnąć Ctrl+Z)',
+    en: 'Dimensions already exist. Generate new ones? (previous will be overwritten — you can undo with Ctrl+Z)'
+  },
+  // Pre-analysis briefing
+  briefing_title: { pl: 'Analiza wstępna danych', en: 'Data pre-analysis' },
+  briefing_segments: { pl: 'Segmenty', en: 'Segments' },
+  briefing_avg_len: { pl: 'Śr. długość', en: 'Avg. length' },
+  briefing_chars: { pl: 'znaków', en: 'chars' },
+  briefing_authors: { pl: 'Rozmówcy', en: 'Speakers' },
+  briefing_files: { pl: 'Pliki źródłowe', en: 'Source files' },
+  briefing_suggest_inductive: {
+    pl: '💡 Sugestia: tryb indukcyjny — brak frameworka, eksploracja danych',
+    en: '💡 Suggestion: inductive mode — no framework provided, data exploration'
+  },
+  briefing_suggest_assisted: {
+    pl: '💡 Sugestia: tryb asystowany — masz framework, AI dopasuje kody',
+    en: '💡 Suggestion: assisted mode — framework provided, AI will match codes'
+  },
+  briefing_suggest_auto: {
+    pl: '💡 Sugestia: tryb auto — duży zbiór (>200 segm.), ręczne kodowanie zajmie dużo czasu',
+    en: '💡 Suggestion: auto mode — large dataset (>200 segments), manual coding would take long'
+  },
+  briefing_suggest_batch: {
+    pl: '💡 Sugerowany batch size: {n} (drift check co tyle segmentów)',
+    en: '💡 Suggested batch size: {n} (drift check every N segments)'
+  },
+  briefing_warn_short: {
+    pl: '⚠ Segmenty bardzo krótkie (<50 zn.) — rozważ łączenie lub zmianę segmentacji',
+    en: '⚠ Segments very short (<50 chars) — consider merging or changing segmentation'
+  },
+  briefing_warn_long: {
+    pl: '⚠ Segmenty bardzo długie (>2000 zn.) — rozważ podział na mniejsze jednostki',
+    en: '⚠ Segments very long (>2000 chars) — consider splitting into smaller units'
+  },
 };
 
 function t(key) {

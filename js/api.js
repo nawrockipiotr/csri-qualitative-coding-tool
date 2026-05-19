@@ -29,11 +29,11 @@ function formatApiError(status, serverMsg, provider) {
   }
 }
 
-async function callAIWithRetry(apiKey, systemPrompt, userContent, maxRetries = 3) {
+async function callAIWithRetry(apiKey, systemPrompt, userContent, maxRetries = 3, options = {}) {
   let lastError;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      return await callAI(apiKey, systemPrompt, userContent);
+      return await callAI(apiKey, systemPrompt, userContent, options);
     } catch (err) {
       lastError = err;
       if (err.name === 'AbortError') throw err;
@@ -48,14 +48,21 @@ async function callAIWithRetry(apiKey, systemPrompt, userContent, maxRetries = 3
   throw lastError;
 }
 
-async function callAI(apiKey, systemPrompt, userContent) {
-  if (currentProvider === 'anthropic') return callAnthropic(apiKey, systemPrompt, userContent);
-  if (currentProvider === 'openai') return callOpenAI(apiKey, systemPrompt, userContent);
-  if (currentProvider === 'google') return callGoogle(apiKey, systemPrompt, userContent);
-  if (currentProvider === 'local') return callLocal(apiKey, systemPrompt, userContent);
+async function callAI(apiKey, systemPrompt, userContent, options = {}) {
+  if (currentProvider === 'anthropic') return callAnthropic(apiKey, systemPrompt, userContent, options);
+  if (currentProvider === 'openai') return callOpenAI(apiKey, systemPrompt, userContent, options);
+  if (currentProvider === 'google') return callGoogle(apiKey, systemPrompt, userContent, options);
+  if (currentProvider === 'local') return callLocal(apiKey, systemPrompt, userContent, options);
 }
 
-async function callAnthropic(apiKey, systemPrompt, userContent) {
+async function callAnthropic(apiKey, systemPrompt, userContent, options = {}) {
+  const body = {
+    model: getModel(),
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userContent }]
+  };
+  if (options.temperature !== undefined) body.temperature = options.temperature;
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     signal: abortController?.signal,
@@ -65,12 +72,7 @@ async function callAnthropic(apiKey, systemPrompt, userContent) {
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
-    body: JSON.stringify({
-      model: getModel(),
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userContent }]
-    })
+    body: JSON.stringify(body)
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
@@ -80,7 +82,16 @@ async function callAnthropic(apiKey, systemPrompt, userContent) {
   return data.content.map(c => c.text || '').join('');
 }
 
-async function callOpenAI(apiKey, systemPrompt, userContent) {
+async function callOpenAI(apiKey, systemPrompt, userContent, options = {}) {
+  const body = {
+    model: getModel(),
+    max_tokens: 4096,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent }
+    ]
+  };
+  if (options.temperature !== undefined) body.temperature = options.temperature;
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     signal: abortController?.signal,
@@ -88,14 +99,7 @@ async function callOpenAI(apiKey, systemPrompt, userContent) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: getModel(),
-      max_tokens: 4096,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent }
-      ]
-    })
+    body: JSON.stringify(body)
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
@@ -105,7 +109,9 @@ async function callOpenAI(apiKey, systemPrompt, userContent) {
   return data.choices[0]?.message?.content || '';
 }
 
-async function callGoogle(apiKey, systemPrompt, userContent) {
+async function callGoogle(apiKey, systemPrompt, userContent, options = {}) {
+  const genConfig = { maxOutputTokens: 4096 };
+  if (options.temperature !== undefined) genConfig.temperature = options.temperature;
   const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${apiKey}`, {
     method: 'POST',
     signal: abortController?.signal,
@@ -113,7 +119,7 @@ async function callGoogle(apiKey, systemPrompt, userContent) {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ parts: [{ text: userContent }] }],
-      generationConfig: { maxOutputTokens: 4096 }
+      generationConfig: genConfig
     })
   });
   if (!resp.ok) {
@@ -124,11 +130,20 @@ async function callGoogle(apiKey, systemPrompt, userContent) {
   return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
 }
 
-async function callLocal(apiKey, systemPrompt, userContent) {
+async function callLocal(apiKey, systemPrompt, userContent, options = {}) {
   const endpoint = document.getElementById('localEndpoint')?.value?.trim() || 'http://localhost:11434/v1';
   const url = endpoint.replace(/\/+$/, '') + '/chat/completions';
   const headers = { 'Content-Type': 'application/json' };
   if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+  const body = {
+    model: getModel(),
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent }
+    ]
+  };
+  if (options.temperature !== undefined) body.temperature = options.temperature;
 
   let resp;
   try {
@@ -136,13 +151,7 @@ async function callLocal(apiKey, systemPrompt, userContent) {
       method: 'POST',
       signal: abortController?.signal,
       headers,
-      body: JSON.stringify({
-        model: getModel(),
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent }
-        ]
-      })
+      body: JSON.stringify(body)
     });
   } catch (fetchErr) {
     if (fetchErr.name === 'AbortError') throw fetchErr;
