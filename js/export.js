@@ -149,4 +149,4 @@ ${singletons > Object.keys(codes).length * 0.25 ? `  - ${t('report_singleton_war
 // ─── Helpers ───
 function ts() { return new Date().toISOString().replace(/[:.]/g, '').substring(0, 15); }
 function csvEsc(s) { return s && (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : (s || ''); }
-function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

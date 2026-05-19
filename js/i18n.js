@@ -477,6 +477,44 @@ const I18N = {
   merge_replace: { pl: 'Zastąp', en: 'Replace' },
   merge_cancel: { pl: 'Anuluj', en: 'Cancel' },
   merge_done: { pl: 'Dodano segmenty', en: 'Segments added' },
+
+  // Consolidation (actionable)
+  consolidation_apply: { pl: 'Zastosuj', en: 'Apply' },
+  consolidation_dismiss: { pl: 'Odrzuć', en: 'Dismiss' },
+  consolidation_none: { pl: 'Brak sugestii konsolidacji — kody są wystarczająco zróżnicowane.', en: 'No consolidation suggestions — codes are sufficiently distinct.' },
+
+  // Drift (actionable)
+  drift_issues: { pl: 'problemów', en: 'issues' },
+
+  // Diagnostics links
+  diag_go_codebook: { pl: '→ Codebook', en: '→ Codebook' },
+
+  // Grounding (rich)
+  grounding_theory: { pl: 'Teoria', en: 'Theory' },
+  grounding_author: { pl: 'Autor(zy)', en: 'Author(s)' },
+  grounding_edit_placeholder: { pl: 'Edytuj uzasadnienie...', en: 'Edit grounding...' },
+  grounding_verify_hint: { pl: '⚠ Zweryfikuj cytowane źródła — AI może halucynować referencje.', en: '⚠ Verify cited sources — AI may hallucinate references.' },
+
+  // Keyboard shortcuts
+  shortcut_prev: { pl: '← Poprzedni (skrót: ←)', en: '← Previous (shortcut: ←)' },
+  shortcut_next: { pl: 'Następny → (skrót: →)', en: 'Next → (shortcut: →)' },
+
+  // Codebook filter & export
+  codebook_filter_placeholder: { pl: 'Filtruj kody...', en: 'Filter codes...' },
+  codebook_export_btn: { pl: 'Eksportuj codebook', en: 'Export codebook' },
+
+  // Undo
+  undo_btn: { pl: 'Cofnij', en: 'Undo' },
+  undo_done: { pl: 'Cofnięto ostatnią akcję.', en: 'Last action undone.' },
+  undo_empty: { pl: 'Brak akcji do cofnięcia.', en: 'Nothing to undo.' },
+
+  // Batch size
+  setup_batch_size: { pl: 'Batch drift check (co ile segmentów)', en: 'Drift check batch size (segments)' },
+
+  // Cost estimate
+  auto_cost_estimate: { pl: 'Szacunkowy koszt', en: 'Estimated cost' },
+  auto_cost_segments: { pl: 'segmentów × ~', en: 'segments × ~' },
+  auto_cost_tokens: { pl: 'tokenów/segment', en: 'tokens/segment' },
 };
 
 function t(key) {

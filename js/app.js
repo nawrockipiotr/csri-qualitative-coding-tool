@@ -42,6 +42,7 @@ let state = {
   codingLang: 'pl',
   coderId: '',
   thresholdN: 20,
+  batchSize: 10,
   researchQuestion: '',
   framework: '',
   segments: [],
@@ -55,6 +56,45 @@ let state = {
   _driftWarnings: [],
   _dimensionGroundings: {},
 };
+
+// ─── Undo stack ───
+const undoStack = [];
+const UNDO_MAX = 20;
+
+function pushUndo(label) {
+  undoStack.push({
+    label,
+    codedRecords: JSON.parse(JSON.stringify(state.codedRecords)),
+    codebook: JSON.parse(JSON.stringify(state.codebook)),
+    themes: JSON.parse(JSON.stringify(state.themes)),
+    dimensions: JSON.parse(JSON.stringify(state.dimensions)),
+  });
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+}
+
+function undo() {
+  if (!undoStack.length) { showStatus(t('undo_empty')); return; }
+  const snap = undoStack.pop();
+  state.codedRecords = snap.codedRecords;
+  state.codebook = snap.codebook;
+  state.themes = snap.themes;
+  state.dimensions = snap.dimensions;
+  saveSession();
+  showStatus(t('undo_done'));
+  if (currentView === 'coding') renderCodingView();
+  else if (currentView === 'codebook') renderCodebookView();
+  else if (currentView === 'visualization') renderVisualizationView();
+}
+
+// ─── Keyboard shortcuts ───
+document.addEventListener('keydown', (e) => {
+  // Only in coding view, not when typing in inputs
+  if (currentView !== 'coding') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSegment(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); nextSegment(); }
+  if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+});
 
 // ─── Provider config (same as Transcript Tool) ───
 const providerConfig = {
@@ -212,6 +252,14 @@ function parseImportData() {
     }
   }
 
+  // If session already has coded data, route through merge dialog
+  if (state.segments.length && state.codedRecords.length) {
+    pendingFiles = [{ filename: 'paste', segments }];
+    renderFileList();
+    showMergeDialog();
+    return;
+  }
+
   state.segments = segments;
   renderPreview();
 }
@@ -278,6 +326,8 @@ async function handleFiles(fileList) {
 
       if (segments.length) {
         pendingFiles.push({ name: file.name, ext, segments });
+      } else {
+        showError(`${file.name}: ${currentLang === 'pl' ? 'Plik pusty lub nie znaleziono segmentów.' : 'File empty or no segments found.'}`);
       }
     } catch (err) {
       console.error(`Error parsing ${file.name}:`, err);
@@ -489,6 +539,7 @@ function confirmSetup() {
   state.guidedMode = document.getElementById('guidedMode').checked;
   state.codingLang = document.getElementById('codingLang').value;
   state.thresholdN = parseInt(document.getElementById('thresholdN').value) || 20;
+  state.batchSize = parseInt(document.getElementById('batchSize')?.value) || 10;
   state.researchQuestion = document.getElementById('researchQuestion')?.value || '';
   state.framework = document.getElementById('framework')?.value || '';
   state.sourceType = document.getElementById('sourceType').value;
@@ -664,6 +715,7 @@ function saveInductiveCode() {
     notes: notes
   };
 
+  pushUndo('inductive');
   saveRecord(record);
   if (state.currentIdx < state.segments.length - 1) state.currentIdx++;
   renderCodingView();
@@ -711,8 +763,13 @@ async function getCounterProposal() {
         <input type="text" id="modifiedCode" placeholder="${t('coding_modified_placeholder')}" style="display:none">
       </div>
       <input type="text" id="codeNotes" placeholder="${t('coding_note')}">
-      <button class="action-btn" onclick="saveCounterDecision('${code.replace(/'/g, "\\'")}', '${(proposedCode || '').replace(/'/g, "\\'")}')"> ${t('coding_save_decision')}</button>
+      <button class="action-btn" id="counterSaveBtn">${t('coding_save_decision')}</button>
     `;
+
+    // Bind save via closure (avoids XSS from inline onclick with user data)
+    document.getElementById('counterSaveBtn').addEventListener('click', () => {
+      saveCounterDecision(code, proposedCode || '');
+    });
 
     // Show modified input when selected
     document.querySelectorAll('input[name="decision"]').forEach(r => {
@@ -754,6 +811,7 @@ function saveCounterDecision(researcherCode, toolProposal) {
     notes: notes
   };
 
+  pushUndo('counter');
   saveRecord(record);
   if (state.currentIdx < state.segments.length - 1) state.currentIdx++;
   renderCodingView();
@@ -780,8 +838,8 @@ async function getAssistedProposal() {
       if (line.toUpperCase().startsWith('CODE:') || line.toUpperCase().startsWith('KOD:'))
         proposedCode = line.split(':').slice(1).join(':').trim();
       if (line.toUpperCase().startsWith('TYPE:') || line.toUpperCase().startsWith('TYP:')) {
-        const t = line.split(':').slice(1).join(':').trim().toLowerCase();
-        if (['descriptive', 'in_vivo', 'process'].includes(t)) proposedType = t;
+        const tp = line.split(':').slice(1).join(':').trim().toLowerCase();
+        if (['descriptive', 'in_vivo', 'process'].includes(tp)) proposedType = tp;
       }
       if (line.toUpperCase().startsWith('JUSTIFICATION:') || line.toUpperCase().startsWith('UZASADNIENIE:'))
         justification = line.split(':').slice(1).join(':').trim();
@@ -800,8 +858,12 @@ async function getAssistedProposal() {
       </div>
       <input type="text" id="altCode" placeholder="${t('coding_alt_placeholder')}" style="display:none">
       <input type="text" id="codeNotes" placeholder="${t('coding_note')}">
-      <button class="action-btn" onclick="saveAssistedDecision('${(proposedCode || '').replace(/'/g, "\\'")}', '${proposedType}')">${t('coding_save_short')}</button>
+      <button class="action-btn" id="assistedSaveBtn">${t('coding_save_short')}</button>
     `;
+
+    document.getElementById('assistedSaveBtn').addEventListener('click', () => {
+      saveAssistedDecision(proposedCode || '', proposedType);
+    });
 
     document.querySelectorAll('input[name="aDecision"]').forEach(r => {
       r.addEventListener('change', () => {
@@ -840,6 +902,7 @@ function saveAssistedDecision(proposedCode, proposedType) {
     notes: notes
   };
 
+  pushUndo('assisted');
   saveRecord(record);
   if (state.currentIdx < state.segments.length - 1) state.currentIdx++;
   renderCodingView();
@@ -857,10 +920,21 @@ function renderAutoView(panel) {
 
   let content = '';
 
+  // Cost estimate helper
+  const costEstimate = (n) => {
+    if (currentProvider === 'local') return '';
+    const tokensPerSeg = 800;
+    const totalTokens = n * tokensPerSeg;
+    const prices = { anthropic: 0.001, openai: 0.00015, google: 0.0001 };
+    const cost = (totalTokens / 1000 * (prices[currentProvider] || 0.001)).toFixed(2);
+    return `<div class="cost-estimate">${t('auto_cost_estimate')}: ~$${cost} (${n} ${t('auto_cost_segments')}${tokensPerSeg} ${t('auto_cost_tokens')})</div>`;
+  };
+
   if (coded === 0 && !autoRunning) {
     // Not started yet — auto-start
     content = `
       <div class="auto-start-panel">
+        ${costEstimate(total)}
         <div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_progress')}</div>
       </div>`;
     setTimeout(() => runAutoCoding(), 100);
@@ -869,6 +943,7 @@ function renderAutoView(panel) {
     content = `
       <div class="auto-start-panel">
         <p>${t('auto_done').replace('.', '')} — ${coded}/${total} (${pct}%).</p>
+        ${costEstimate(uncoded.length)}
         <button class="action-btn" onclick="runAutoCoding()">${t('auto_start')} (${uncoded.length} ${t('parse_segments')})</button>
       </div>`;
     content += renderAutoReview();
@@ -898,10 +973,6 @@ async function runAutoCoding() {
   autoRunning = true;
   const uncoded = state.segments.filter(s => !state.codedRecords.some(r => r.segment_id === s.segment_id));
   if (!uncoded.length) { autoRunning = false; renderCodingView(); return; }
-
-  // Clear previous auto-generated themes/dimensions before regenerating
-  state.themes = {};
-  state.dimensions = {};
 
   const statusEl = document.getElementById('autoStatus');
   const panel = document.getElementById('view-coding');
@@ -963,9 +1034,10 @@ async function runAutoCoding() {
       };
 
       saveRecord(record, true);
-      if ((i + 1) % 10 === 0) {
+      const batchN = state.batchSize || 10;
+      if ((i + 1) % batchN === 0) {
         saveSession();
-        // Batch drift check every 10 segments
+        // Batch drift check every N segments
         if (!autoCancelled) await runBatchDriftCheck(apiKey, i);
       }
     } catch (err) {
@@ -987,6 +1059,13 @@ async function runAutoCoding() {
       <p>${satWarning}</p>
     </div>`;
   }
+
+  // Clear themes/dimensions before regenerating (safe here — coding phase is done)
+  state.themes = {};
+  state.dimensions = {};
+  state._themeAuditTrail = null;
+  state._abductionStats = null;
+  state._dimensionGroundings = {};
 
   // Phase 2: Generate themes (multi-pass: generate → critique → revise)
   await autoGenerateThemes(apiKey);
@@ -1051,6 +1130,46 @@ function checkSaturation() {
     return t('sat_warning_text').replace('{n}', newCodesInLast10);
   }
   return null;
+}
+
+// ─── Shared dimension parser ───
+function parseDimensionsResponse(response) {
+  const newDims = {};
+  const groundings = {};
+  const lines = response.split('\n');
+  let currentDim = '';
+  let currentTheory = '', currentAuthor = '', currentGrounding = '';
+  for (const line of lines) {
+    if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
+      // Save previous dimension
+      if (currentDim && newDims[currentDim]) {
+        groundings[currentDim] = { theory: currentTheory, author: currentAuthor, text: currentGrounding };
+      }
+      currentDim = line.split(':').slice(1).join(':').trim();
+      currentTheory = ''; currentAuthor = ''; currentGrounding = '';
+    } else if ((line.toUpperCase().startsWith('THEMES:') || line.toUpperCase().startsWith('TEMATY:')) && currentDim) {
+      const allThemeNames = Object.keys(state.themes);
+      const dimThemes = line.split(':').slice(1).join(':').split(',').map(th => th.trim()).map(th => {
+        if (state.themes[th]) return th;
+        return allThemeNames.find(k => k.toLowerCase() === th.toLowerCase()) || null;
+      }).filter(Boolean);
+      if (dimThemes.length) newDims[currentDim] = dimThemes;
+    } else if ((line.toUpperCase().startsWith('THEORY:') || line.toUpperCase().startsWith('TEORIA:')) && currentDim) {
+      currentTheory = line.split(':').slice(1).join(':').trim();
+    } else if ((line.toUpperCase().startsWith('AUTHOR:') || line.toUpperCase().startsWith('AUTOR:')) && currentDim) {
+      currentAuthor = line.split(':').slice(1).join(':').trim();
+    } else if ((line.toUpperCase().startsWith('GROUNDING:') || line.toUpperCase().startsWith('UZASADNIENIE:')) && currentDim) {
+      currentGrounding = line.split(':').slice(1).join(':').trim();
+    }
+  }
+  // Save last dimension
+  if (currentDim && newDims[currentDim]) {
+    groundings[currentDim] = { theory: currentTheory, author: currentAuthor, text: currentGrounding };
+  }
+  // Apply to state
+  state.dimensions = newDims;
+  state._dimensionGroundings = groundings;
+  return newDims;
 }
 
 // ─── Multi-pass theme generation ───
@@ -1227,46 +1346,25 @@ async function autoGenerateDimensions(apiKey) {
     const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes, state.framework);
     const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
 
-    const lines = response.split('\n');
-    let currentDim = '';
-    let currentGrounding = '';
-    for (const line of lines) {
-      if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
-        // Save previous dimension if pending
-        if (currentDim && state.dimensions[currentDim]) {
-          state._dimensionGroundings = state._dimensionGroundings || {};
-          state._dimensionGroundings[currentDim] = currentGrounding;
-        }
-        currentDim = line.split(':').slice(1).join(':').trim();
-        currentGrounding = '';
-      } else if ((line.toUpperCase().startsWith('THEMES:') || line.toUpperCase().startsWith('TEMATY:')) && currentDim) {
-        const allThemeNames = Object.keys(state.themes);
-        const dimThemes = line.split(':').slice(1).join(':').split(',').map(th => th.trim()).map(th => {
-          if (state.themes[th]) return th;
-          return allThemeNames.find(k => k.toLowerCase() === th.toLowerCase()) || null;
-        }).filter(Boolean);
-        if (dimThemes.length) {
-          state.dimensions[currentDim] = dimThemes;
-        }
-      } else if ((line.toUpperCase().startsWith('GROUNDING:') || line.toUpperCase().startsWith('UZASADNIENIE:')) && currentDim) {
-        currentGrounding = line.split(':').slice(1).join(':').trim();
-      }
-    }
-    // Save last dimension grounding
-    if (currentDim && state.dimensions[currentDim]) {
-      state._dimensionGroundings = state._dimensionGroundings || {};
-      state._dimensionGroundings[currentDim] = currentGrounding;
-    }
+    parseDimensionsResponse(response);
   } catch (err) {
     console.error('Auto dimensions error:', err.message);
   }
 }
 
+let autoReviewPage = 0;
+const AUTO_REVIEW_PAGE_SIZE = 20;
+
 function renderAutoReview() {
   const records = state.codedRecords.filter(r => r.coding_mode === 'auto');
   if (!records.length) return '';
 
-  const rows = records.map((r, idx) => {
+  const totalPages = Math.ceil(records.length / AUTO_REVIEW_PAGE_SIZE);
+  if (autoReviewPage >= totalPages) autoReviewPage = totalPages - 1;
+  const start = autoReviewPage * AUTO_REVIEW_PAGE_SIZE;
+  const pageRecords = records.slice(start, start + AUTO_REVIEW_PAGE_SIZE);
+
+  const rows = pageRecords.map((r) => {
     const textPreview = r.text_primary.length > 120 ? r.text_primary.substring(0, 120) + '...' : r.text_primary;
     return `<tr>
       <td class="seg-id">${r.segment_id}</td>
@@ -1278,6 +1376,13 @@ function renderAutoReview() {
     </tr>`;
   }).join('');
 
+  const pagination = totalPages > 1 ? `
+    <div class="coding-nav" style="margin-top:0.5rem">
+      <button class="nav-btn-sm" onclick="autoReviewPage--;renderCodingView()" ${autoReviewPage === 0 ? 'disabled' : ''}>←</button>
+      <span class="seg-counter">${autoReviewPage + 1} / ${totalPages}</span>
+      <button class="nav-btn-sm" onclick="autoReviewPage++;renderCodingView()" ${autoReviewPage >= totalPages - 1 ? 'disabled' : ''}>→</button>
+    </div>` : '';
+
   return `
     <div class="auto-review">
       <h3>${t('auto_review_title')} (${records.length})</h3>
@@ -1285,6 +1390,7 @@ function renderAutoReview() {
         <thead><tr><th>ID</th><th>${t('auto_col_text')}</th><th>${t('auto_col_code')}</th><th>${t('auto_col_type')}</th><th>${t('auto_col_justification')}</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
+      ${pagination}
     </div>`;
 }
 
@@ -1436,10 +1542,15 @@ function renderCodebookView() {
       <div class="stat-card"><div class="stat-num">${Object.keys(state.dimensions).length}</div><div class="stat-label">${t('codebook_dims')}</div></div>
     </div>
     <h3>${t('codebook_list')}</h3>
-    <table class="code-table">
+    <div class="undo-bar">
+      <button class="undo-btn" onclick="undo()" ${!undoStack.length ? 'disabled' : ''}>${t('undo_btn')} (Ctrl+Z)</button>
+      <button class="undo-btn" onclick="exportCodebook()">${t('codebook_export_btn')}</button>
+    </div>
+    <input type="text" class="codebook-filter" id="codebookFilter" placeholder="${t('codebook_filter_placeholder')}" oninput="filterCodebook(this.value)">
+    <table class="code-table" id="codeTable">
       <thead><tr><th>${t('codebook_code')}</th><th>${t('codebook_type')}</th><th>${t('codebook_freq')}</th><th>${t('codebook_def')}</th></tr></thead>
       <tbody>${codes.map(([code, info]) => `
-        <tr>
+        <tr data-code="${escapeHtml(code.toLowerCase())}">
           <td><code>${escapeHtml(code)}</code></td>
           <td>${info.type}</td>
           <td>${info.frequency}</td>
@@ -1476,6 +1587,32 @@ function renderCodebookView() {
 
 function updateDefinition(code, def) {
   if (state.codebook[code]) { state.codebook[code].definition = def; saveSession(); }
+}
+
+function filterCodebook(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#codeTable tbody tr').forEach(row => {
+    row.style.display = !q || row.dataset.code.includes(q) ? '' : 'none';
+  });
+}
+
+function exportCodebook() {
+  const codes = Object.entries(state.codebook).sort((a, b) => b[1].frequency - a[1].frequency);
+  const header = 'code,type,frequency,definition';
+  const rows = codes.map(([c, i]) => [csvEsc(c), i.type, i.frequency, csvEsc(i.definition || '')].join(','));
+  const csv = '﻿' + header + '\n' + rows.join('\n');
+  downloadFile(csv, `codebook_${ts()}.csv`, 'text/csv;charset=utf-8');
+}
+
+function updateGrounding(dim, text) {
+  if (!state._dimensionGroundings) state._dimensionGroundings = {};
+  const existing = state._dimensionGroundings[dim];
+  if (typeof existing === 'object') {
+    existing.text = text;
+  } else {
+    state._dimensionGroundings[dim] = { theory: '', author: '', text };
+  }
+  saveSession();
 }
 
 // ─── Theme / Dimension CRUD ───
@@ -1561,10 +1698,100 @@ async function suggestConsolidation() {
   try {
     abortController = new AbortController();
     const response = await callAIWithRetry(apiKey, getConsolidationSuggestionsPrompt(), `Lista kodów:\n${codeList}`);
-    el.innerHTML = `<div class="ai-result"><h4>${t('codebook_consolidation_title')}</h4><pre>${response}</pre></div>`;
+
+    // Parse MERGE suggestions
+    const suggestions = [];
+    const lines = response.split('\n');
+    let currentMerge = null;
+    for (const line of lines) {
+      if (line.toUpperCase().startsWith('MERGE:')) {
+        const parts = line.split(':').slice(1).join(':').trim();
+        const arrow = parts.indexOf('→') !== -1 ? '→' : (parts.indexOf('->') !== -1 ? '->' : null);
+        if (arrow) {
+          const [left, right] = parts.split(arrow).map(s => s.trim());
+          const sources = left.split('+').map(s => s.trim()).filter(Boolean);
+          currentMerge = { sources, target: right, reason: '' };
+        }
+      } else if (line.toUpperCase().startsWith('REASON:') && currentMerge) {
+        currentMerge.reason = line.split(':').slice(1).join(':').trim();
+        suggestions.push(currentMerge);
+        currentMerge = null;
+      }
+    }
+    if (currentMerge) suggestions.push(currentMerge);
+
+    if (!suggestions.length) {
+      el.innerHTML = `<div class="ai-result"><p>${t('consolidation_none')}</p></div>`;
+      return;
+    }
+
+    // Render actionable cards
+    const cards = suggestions.map((s, i) => {
+      const sourceBadges = s.sources.map(c => `<code>${escapeHtml(c)}</code>`).join(' + ');
+      return `<div class="consolidation-card" id="mergeCard_${i}">
+        <div class="consolidation-merge">${sourceBadges} → <code class="consolidation-target">${escapeHtml(s.target)}</code></div>
+        ${s.reason ? `<div class="consolidation-reason">${escapeHtml(s.reason)}</div>` : ''}
+        <div class="consolidation-actions">
+          <button class="action-btn small" data-merge-idx="${i}">${t('consolidation_apply')}</button>
+          <button class="action-btn small secondary" data-dismiss-idx="${i}">${t('consolidation_dismiss')}</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div class="ai-result"><h4>${t('codebook_consolidation_title')}</h4>${cards}</div>`;
+
+    // Store suggestions for apply
+    state._pendingMerges = suggestions;
+
+    // Bind buttons
+    el.querySelectorAll('[data-merge-idx]').forEach(btn => {
+      btn.addEventListener('click', () => applyMerge(parseInt(btn.dataset.mergeIdx)));
+    });
+    el.querySelectorAll('[data-dismiss-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('mergeCard_' + btn.dataset.dismissIdx)?.remove();
+      });
+    });
+
   } catch (err) {
     el.innerHTML = `<div class="error-msg">${err.message}</div>`;
   }
+}
+
+function applyMerge(idx) {
+  const merge = state._pendingMerges?.[idx];
+  if (!merge) return;
+
+  pushUndo('merge');
+  const targetCode = merge.target;
+  const sourceType = merge.sources.map(c => state.codebook[c]?.type).find(t2 => t2) || 'descriptive';
+
+  // Recode all records from source codes to target
+  for (const record of state.codedRecords) {
+    if (merge.sources.includes(record.first_order_code)) {
+      record.notes = (record.notes || '') + ` [consolidated: ${record.first_order_code} → ${targetCode}]`;
+      record.first_order_code = targetCode;
+    }
+  }
+
+  // Remove source codes from codebook
+  for (const src of merge.sources) {
+    delete state.codebook[src];
+  }
+
+  // Update themes — replace source codes with target
+  for (const [theme, codes] of Object.entries(state.themes)) {
+    const replaced = codes.map(c => merge.sources.includes(c) ? targetCode : c);
+    state.themes[theme] = [...new Set(replaced)];
+  }
+
+  // Register target code and recalc
+  recalcAllFrequencies();
+  saveSession();
+
+  // Remove card and re-render
+  document.getElementById('mergeCard_' + idx)?.remove();
+  renderCodebookView();
 }
 
 // ─── AI generation (standalone — available in all modes, uses multi-pass) ───
@@ -1626,28 +1853,9 @@ async function generateDimensionsAI() {
     const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes, state.framework);
     const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
 
-    const newDims = {};
-    const groundings = {};
-    const lines = response.split('\n');
-    let currentDim = '';
-    for (const line of lines) {
-      if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
-        currentDim = line.split(':').slice(1).join(':').trim();
-      } else if ((line.toUpperCase().startsWith('THEMES:') || line.toUpperCase().startsWith('TEMATY:')) && currentDim) {
-        const allThemeNames = Object.keys(state.themes);
-        const dimThemes = line.split(':').slice(1).join(':').split(',').map(th => th.trim()).map(th => {
-          if (state.themes[th]) return th;
-          return allThemeNames.find(k => k.toLowerCase() === th.toLowerCase()) || null;
-        }).filter(Boolean);
-        if (dimThemes.length) newDims[currentDim] = dimThemes;
-      } else if ((line.toUpperCase().startsWith('GROUNDING:') || line.toUpperCase().startsWith('UZASADNIENIE:')) && currentDim) {
-        groundings[currentDim] = line.split(':').slice(1).join(':').trim();
-      }
-    }
+    const newDims = parseDimensionsResponse(response);
 
     if (Object.keys(newDims).length) {
-      state.dimensions = newDims;
-      state._dimensionGroundings = groundings;
       saveSession();
       if (currentView === 'codebook') renderCodebookView();
       else if (currentView === 'visualization') renderVisualizationView();
@@ -1725,10 +1933,25 @@ function renderVisualizationView() {
   // Dimension groundings
   let groundingHtml = '';
   if (state._dimensionGroundings && Object.keys(state._dimensionGroundings).length) {
-    groundingHtml = `<h3>${t('viz_grounding')}</h3><div class="diag-grid">` +
-      Object.entries(state._dimensionGroundings).map(([dim, g]) =>
-        `<div class="diag-item diag-info"><strong>${escapeHtml(dim)}:</strong> ${escapeHtml(g)}</div>`
-      ).join('') + `</div>`;
+    const groundingCards = Object.entries(state._dimensionGroundings).map(([dim, g]) => {
+      // Support both old format (string) and new format ({theory, author, text})
+      const isRich = typeof g === 'object';
+      const theory = isRich ? (g.theory || '') : '';
+      const author = isRich ? (g.author || '') : '';
+      const text = isRich ? (g.text || '') : (g || '');
+      return `<div class="grounding-card">
+        <div class="grounding-dim">${escapeHtml(dim)}</div>
+        ${theory ? `<div class="grounding-theory"><span class="grounding-label">${t('grounding_theory')}:</span> ${escapeHtml(theory)}</div>` : ''}
+        ${author ? `<div class="grounding-author"><span class="grounding-label">${t('grounding_author')}:</span> ${escapeHtml(author)}</div>` : ''}
+        <div class="grounding-text">${escapeHtml(text)}</div>
+        <div class="grounding-edit-row">
+          <input type="text" class="grounding-edit-input" placeholder="${t('grounding_edit_placeholder')}" value="${escapeHtml(text)}"
+                 onchange="updateGrounding('${dim.replace(/'/g, "\\'")}', this.value)">
+        </div>
+        <div class="grounding-verify">${t('grounding_verify_hint')}</div>
+      </div>`;
+    }).join('');
+    groundingHtml = `<h3>${t('viz_grounding')}</h3>${groundingCards}`;
   }
 
   // Abduction stats
@@ -1741,20 +1964,48 @@ function renderVisualizationView() {
     </div>`;
   }
 
-  // Drift warnings
+  // Drift warnings — actionable
   let driftHtml = '';
   if (state._driftWarnings && state._driftWarnings.length) {
-    driftHtml = `<h3>${t('viz_drift_warnings')}</h3><div class="diag-grid">` +
-      state._driftWarnings.map(w =>
-        `<div class="diag-item diag-warn"><strong>${t('viz_drift_batch')} ${w.batch}:</strong> ${w.drifts.map(d => escapeHtml(d)).join('<br>')}</div>`
-      ).join('') + `</div>`;
+    const driftCards = state._driftWarnings.map((w, wi) => {
+      // Parse DRIFT lines for segment pairs
+      const driftDetails = w.drifts.map((d, di) => {
+        // Try to extract segment IDs from DRIFT line
+        const match = d.match(/DRIFT:\s*(\S+)\s*\(code:\s*([^)]+)\)\s*↔\s*(\S+)\s*\(code:\s*([^)]+)\)/i);
+        if (match) {
+          const [, seg1, code1, seg2, code2] = match;
+          const r1 = state.codedRecords.find(r => r.segment_id === seg1);
+          const r2 = state.codedRecords.find(r => r.segment_id === seg2);
+          return `<div class="drift-detail">
+            <div class="drift-pair">
+              <div class="drift-seg"><span class="seg-id">${escapeHtml(seg1)}</span> <code>${escapeHtml(code1)}</code>
+                ${r1 ? `<div class="drift-text">${escapeHtml(r1.text_primary.substring(0, 150))}${r1.text_primary.length > 150 ? '...' : ''}</div>` : ''}
+              </div>
+              <div class="drift-seg"><span class="seg-id">${escapeHtml(seg2)}</span> <code>${escapeHtml(code2)}</code>
+                ${r2 ? `<div class="drift-text">${escapeHtml(r2.text_primary.substring(0, 150))}${r2.text_primary.length > 150 ? '...' : ''}</div>` : ''}
+              </div>
+            </div>
+          </div>`;
+        }
+        return `<div class="drift-detail">${escapeHtml(d)}</div>`;
+      }).join('');
+      return `<details class="drift-card">
+        <summary class="diag-item diag-warn"><strong>${t('viz_drift_batch')} ${w.batch}:</strong> ${w.drifts.length} ${t('drift_issues')}</summary>
+        ${driftDetails}
+      </details>`;
+    }).join('');
+    driftHtml = `<h3>${t('viz_drift_warnings')}</h3>${driftCards}`;
   }
+
+  // Actionable diagnostics — links to codebook
+  const singletonLink = singletons > 0 ? ` <button class="link-btn" onclick="showView('codebook')">${t('diag_go_codebook')}</button>` : '';
+  const overloadLink = overloaded.length ? ` <button class="link-btn" onclick="showView('codebook')">${t('diag_go_codebook')}</button>` : '';
 
   panel.innerHTML = `
     <h3>${t('viz_diagnostics')}</h3>
     <div class="diag-grid">
-      <div class="diag-item diag-${singletonStatus}">${t('viz_singletons')} ${singletons}/${totalCodes} (${singletonPct}%)</div>
-      <div class="diag-item diag-${overloadStatus}">${t('viz_overloaded')} ${overloaded.length}${overloaded.length ? ' — ' + overloaded.map(([c]) => c).join(', ') : ''}</div>
+      <div class="diag-item diag-${singletonStatus}">${t('viz_singletons')} ${singletons}/${totalCodes} (${singletonPct}%)${singletonStatus !== 'ok' ? singletonLink : ''}</div>
+      <div class="diag-item diag-${overloadStatus}">${t('viz_overloaded')} ${overloaded.length}${overloaded.length ? ' — ' + overloaded.map(([c]) => c).join(', ') + overloadLink : ''}</div>
       ${satHtml}
     </div>
     ${abductionHtml}
@@ -1837,6 +2088,8 @@ function restoreSession() {
     if (langEl) langEl.value = state.codingLang || 'pl';
     const threshEl = document.getElementById('thresholdN');
     if (threshEl) threshEl.value = state.thresholdN || 20;
+    const batchEl = document.getElementById('batchSize');
+    if (batchEl) batchEl.value = state.batchSize || 10;
     const rqEl = document.getElementById('researchQuestion');
     if (rqEl) rqEl.value = state.researchQuestion || '';
     const fwEl = document.getElementById('framework');
@@ -1853,6 +2106,6 @@ function restoreSession() {
 
 function dismissSession() {
   document.getElementById('sessionBar').style.display = 'none';
-  state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {} };
+  state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {} };
   localStorage.removeItem('coding_tool_session');
 }

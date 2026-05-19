@@ -231,10 +231,17 @@
           <input type="number" id="thresholdN" value="20" min="5" max="100">
         </div>
         <div>
-          <label class="save-check" style="margin-top:1.6rem">
+          <label data-i18n="setup_batch_size">Batch drift check (co ile segmentów)</label>
+          <input type="number" id="batchSize" value="10" min="5" max="50">
+        </div>
+      </div>
+      <div class="params-row">
+        <div>
+          <label class="save-check">
             <input type="checkbox" id="guidedMode"> <span data-i18n="setup_guided">Guided mode</span>
           </label>
         </div>
+        <div></div>
       </div>
     </div>
 

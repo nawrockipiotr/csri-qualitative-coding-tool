@@ -229,7 +229,9 @@ ${themeList}
 RESPONSE FORMAT (strict, repeat for each dimension):
 DIMENSION: [dimension name]
 THEMES: [theme1], [theme2]
-GROUNDING: [1-2 sentences — theoretical justification, connection to existing constructs/literature]`;
+THEORY: [name of the theory, construct, or framework this dimension connects to]
+AUTHOR: [key author(s) and year, e.g. Eisenhardt (1989), Gioia et al. (2013)]
+GROUNDING: [1-2 sentences — how this dimension maps onto the cited theory/construct and why the connection is warranted]`;
 }
 
 // ─── Legacy drift check (single pair) ───
