@@ -56,12 +56,12 @@ function exportCSV() {
     for (const th of dimThemes) themeToDim[th] = dim;
   }
 
-  const header = 'segment_id,text_primary,author,first_order_code,code_type,second_order_theme,aggregate_dimension,notes';
+  const header = 'segment_id,text_primary,author,first_order_code,code_type,coding_mode,final_decision,second_order_theme,aggregate_dimension,notes';
   const rows = state.codedRecords.map(r => {
     const theme = codeToTheme[r.first_order_code] || '';
     const dim = themeToDim[theme] || '';
     return [r.segment_id, csvEsc(r.text_primary), csvEsc(r.author || ''), csvEsc(r.first_order_code),
-            r.code_type, csvEsc(theme), csvEsc(dim), csvEsc(r.notes || '')].join(',');
+            r.code_type, r.coding_mode || '', r.final_decision || '', csvEsc(theme), csvEsc(dim), csvEsc(r.notes || '')].join(',');
   });
 
   const csv = '﻿' + header + '\n' + rows.join('\n');

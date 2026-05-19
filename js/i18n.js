@@ -5,8 +5,8 @@ let currentLang = localStorage.getItem('coding_tool_lang') || 'pl';
 const I18N = {
   // Hero
   hero_lead: {
-    pl: 'Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Trzy tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany), eksport do JSON/CSV/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.',
-    en: 'A qualitative coding tool for textual data using the Gioia methodology. Three coding modes, AI support (counter-proposals, assisted mode), export to JSON/CSV/Markdown. Data stays in your browser — no server required.'
+    pl: 'Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Cztery tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany, pełna automatyzacja), eksport do JSON/CSV/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.',
+    en: 'A qualitative coding tool for textual data using the Gioia methodology. Four coding modes, AI support (counter-proposals, assisted mode, full automation), export to JSON/CSV/Markdown. Data stays in your browser — no server required.'
   },
   hero_howto_title: {
     pl: 'Jak korzystać z narzędzia',
@@ -165,6 +165,22 @@ const I18N = {
   auto_cancel_edit: {
     pl: 'Anuluj',
     en: 'Cancel'
+  },
+  auto_col_text: {
+    pl: 'Tekst',
+    en: 'Text'
+  },
+  auto_col_code: {
+    pl: 'Kod',
+    en: 'Code'
+  },
+  auto_col_type: {
+    pl: 'Typ',
+    en: 'Type'
+  },
+  auto_col_justification: {
+    pl: 'Uzasadnienie',
+    en: 'Justification'
   },
   auto_themes_progress: {
     pl: 'Generowanie tematów 2nd-order...',
