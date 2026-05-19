@@ -797,20 +797,23 @@ h1 {
 .lang-pair {
   display: flex;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 3px;
   overflow: hidden;
+  margin-left: 0.5rem;
+  align-self: center;
 }
 .lang-btn {
   background: none;
   border: none;
-  padding: 0.25rem 0.55rem;
+  padding: 0.2rem 0.45rem;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-family: inherit;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-dim);
   transition: background 0.15s, color 0.15s;
   line-height: 1;
+  letter-spacing: 0.03em;
 }
 .lang-btn:first-child { border-right: 1px solid var(--border); }
 .lang-btn.active {
