@@ -38,6 +38,11 @@ const I18N = {
   info_counter: { pl: 'Kontrpropozycja', en: 'Counter-proposal' },
   info_assisted: { pl: 'Tryb asystowany', en: 'Assisted mode' },
   info_gioia: { pl: 'Metodologia Gioia', en: 'Gioia methodology' },
+  info_auto: { pl: 'Tryb automatyczny', en: 'Automatic mode' },
+  info_auto_text: {
+    pl: 'AI koduje cały korpus automatycznie — segment po segmencie. Wyniki trafiają do tabeli przeglądu, gdzie badacz koryguje kody, typy i uzasadnienia. Tryb pozwala zobaczyć cały proces kodowania od razu, a potem przejść do samodzielnych trybów z większą wiedzą o danych.',
+    en: 'AI codes the entire corpus automatically — segment by segment. Results appear in a review table where the researcher can correct codes, types, and justifications. This mode lets you see the full coding process at once, then transition to independent modes with better knowledge of the data.'
+  },
   info_export: { pl: 'Eksport', en: 'Export' },
 
   info_inductive_text: {
@@ -119,6 +124,47 @@ const I18N = {
   mode_assisted_desc: {
     pl: 'AI proponuje kod, badacz akceptuje/modyfikuje/odrzuca.',
     en: 'AI proposes code, researcher accepts/modifies/rejects.'
+  },
+  mode_auto: { pl: 'Automatyczny', en: 'Automatic' },
+  mode_auto_desc: {
+    pl: 'AI koduje cały korpus. Badacz przegląda i koryguje wyniki.',
+    en: 'AI codes the entire corpus. Researcher reviews and corrects results.'
+  },
+  auto_start: {
+    pl: 'Zakoduj cały korpus automatycznie',
+    en: 'Code entire corpus automatically'
+  },
+  auto_progress: {
+    pl: 'Kodowanie automatyczne...',
+    en: 'Automatic coding...'
+  },
+  auto_segment: {
+    pl: 'Koduję segment',
+    en: 'Coding segment'
+  },
+  auto_done: {
+    pl: 'Kodowanie zakończone. Przejrzyj wyniki poniżej.',
+    en: 'Coding complete. Review results below.'
+  },
+  auto_cancel: {
+    pl: 'Przerwij',
+    en: 'Cancel'
+  },
+  auto_review_title: {
+    pl: 'Przegląd wyników',
+    en: 'Review results'
+  },
+  auto_edit: {
+    pl: 'Edytuj',
+    en: 'Edit'
+  },
+  auto_save_edit: {
+    pl: 'Zapisz zmianę',
+    en: 'Save change'
+  },
+  auto_cancel_edit: {
+    pl: 'Anuluj',
+    en: 'Cancel'
   },
   setup_params: { pl: 'Parametry', en: 'Parameters' },
   setup_coder_id: { pl: 'ID kodera', en: 'Coder ID' },

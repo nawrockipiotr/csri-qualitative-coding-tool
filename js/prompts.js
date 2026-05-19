@@ -46,6 +46,26 @@ REASON: [why these are the same phenomenon]
 Max 5 suggestions, sorted from most obvious. If no merges are warranted, say so.`;
 }
 
+function getAutoCodePrompt(codingLang, researchQuestion, framework, existingCodes) {
+  return `You are a qualitative coding expert performing automatic coding of a data segment.
+Your task: assign the most appropriate first-order code to the segment.
+
+RULES:
+- If existing codes are provided and one fits — reuse it. Only create a new code when nothing fits.
+- Prefer lower-abstraction, empirically grounded codes (first-order concepts).
+- Mark codes derived directly from participant language as in_vivo.
+- Code language: ${codingLang}.
+- Justification: 1 sentence — why this code captures the segment's meaning.
+${researchQuestion ? `Research question: ${researchQuestion}` : ''}
+${framework ? `Conceptual framework / a priori codes:\n${framework}` : ''}
+${existingCodes.length ? `Existing codes (reuse when appropriate): ${existingCodes.join(', ')}` : ''}
+
+RESPONSE FORMAT (strict, one line each):
+CODE: [code name]
+TYPE: descriptive | in_vivo | process
+JUSTIFICATION: [1 sentence]`;
+}
+
 function getDriftCheckPrompt() {
   return `You are a qualitative coding consistency checker. Compare the two coded segments below.
 They appear to contain similar content but received different codes.

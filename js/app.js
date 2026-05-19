@@ -285,6 +285,12 @@ function renderCodingView() {
     </div>`;
   }
 
+  // Auto mode has its own full-page UI
+  if (state.codingMode === 'auto') {
+    renderAutoView(panel);
+    return;
+  }
+
   // Build mode-specific UI
   let modeHtml = '';
   if (state.codingMode === 'inductive') {
@@ -566,6 +572,188 @@ function saveAssistedDecision(proposedCode, proposedType) {
 
   saveRecord(record);
   if (state.currentIdx < state.segments.length - 1) state.currentIdx++;
+  renderCodingView();
+}
+
+// ─── Auto mode ───
+let autoCancelled = false;
+
+function renderAutoView(panel) {
+  const coded = state.codedRecords.length;
+  const total = state.segments.length;
+  const pct = Math.round(coded / total * 100);
+  const uncoded = state.segments.filter(s => !state.codedRecords.some(r => r.segment_id === s.segment_id));
+
+  let content = '';
+
+  if (coded === 0) {
+    // Not started yet
+    content = `
+      <div class="auto-start-panel">
+        <p>${t('mode_auto_desc')}</p>
+        <button class="action-btn" onclick="runAutoCoding()">${t('auto_start')}</button>
+      </div>`;
+  } else if (uncoded.length > 0) {
+    // Partially done — offer to continue
+    content = `
+      <div class="auto-start-panel">
+        <p>${t('auto_done').replace('.', '')} — ${coded}/${total} (${pct}%).</p>
+        <button class="action-btn" onclick="runAutoCoding()">${t('auto_start')} (${uncoded.length} ${t('parse_segments')})</button>
+      </div>`;
+    content += renderAutoReview();
+  } else {
+    // All coded
+    content = `<div class="status-msg">${t('auto_done')} ${coded}/${total}</div>`;
+    content += renderAutoReview();
+  }
+
+  panel.innerHTML = `
+    <div class="coding-progress">
+      <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <div class="progress-text">${t('coding_coded')} ${coded}/${total} (${pct}%)</div>
+    </div>
+    <div id="autoStatus"></div>
+    ${content}
+    <div id="autoReviewArea"></div>
+  `;
+  lucide.createIcons();
+}
+
+async function runAutoCoding() {
+  const apiKey = document.getElementById('apiKey').value;
+  if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
+
+  autoCancelled = false;
+  const uncoded = state.segments.filter(s => !state.codedRecords.some(r => r.segment_id === s.segment_id));
+  if (!uncoded.length) { renderCodingView(); return; }
+
+  const statusEl = document.getElementById('autoStatus');
+  const panel = document.getElementById('view-coding');
+
+  // Show progress UI with cancel button
+  statusEl.innerHTML = `
+    <div class="auto-progress-bar">
+      <div class="api-spinner-wrap"><span class="api-spinner"></span> <span id="autoProgressText">${t('auto_progress')} 0/${uncoded.length}</span></div>
+      <button class="action-btn secondary" onclick="autoCancelled=true">${t('auto_cancel')}</button>
+    </div>`;
+
+  for (let i = 0; i < uncoded.length; i++) {
+    if (autoCancelled) break;
+
+    const seg = uncoded[i];
+    const progText = document.getElementById('autoProgressText');
+    if (progText) progText.textContent = `${t('auto_segment')} ${i + 1}/${uncoded.length} — ${seg.segment_id}`;
+
+    try {
+      abortController = new AbortController();
+      const existingCodes = Object.keys(state.codebook);
+      const systemPrompt = getAutoCodePrompt(state.codingLang, state.researchQuestion, state.framework, existingCodes);
+      const response = await callAIWithRetry(apiKey, systemPrompt, `Fragment: ${seg.text_primary}`);
+
+      let proposedCode = '', proposedType = 'descriptive', justification = '';
+      for (const line of response.split('\n')) {
+        if (line.toUpperCase().startsWith('CODE:') || line.toUpperCase().startsWith('KOD:'))
+          proposedCode = line.split(':').slice(1).join(':').trim();
+        if (line.toUpperCase().startsWith('TYPE:') || line.toUpperCase().startsWith('TYP:')) {
+          const tp = line.split(':').slice(1).join(':').trim().toLowerCase();
+          if (['descriptive', 'in_vivo', 'process'].includes(tp)) proposedType = tp;
+        }
+        if (line.toUpperCase().startsWith('JUSTIFICATION:') || line.toUpperCase().startsWith('UZASADNIENIE:'))
+          justification = line.split(':').slice(1).join(':').trim();
+      }
+
+      if (!proposedCode) proposedCode = response.trim().split('\n')[0];
+
+      const record = {
+        segment_id: seg.segment_id,
+        source_type: state.sourceType,
+        text_primary: seg.text_primary,
+        author: seg.author || '',
+        first_order_code: proposedCode,
+        code_type: proposedType,
+        coding_mode: 'auto',
+        researcher_code: null,
+        tool_proposal: proposedCode,
+        final_decision: 'tool',
+        cycle: 1,
+        coder_id: state.coderId,
+        guided_mode: false,
+        timestamp_coded: new Date().toISOString(),
+        notes: justification
+      };
+
+      saveRecord(record);
+    } catch (err) {
+      if (err.name === 'AbortError' || autoCancelled) break;
+      console.error(`Auto-coding error on ${seg.segment_id}:`, err.message);
+      // Skip this segment and continue
+    }
+  }
+
+  renderCodingView();
+}
+
+function renderAutoReview() {
+  const records = state.codedRecords.filter(r => r.coding_mode === 'auto');
+  if (!records.length) return '';
+
+  const rows = records.map((r, idx) => {
+    const textPreview = r.text_primary.length > 120 ? r.text_primary.substring(0, 120) + '...' : r.text_primary;
+    return `<tr>
+      <td class="seg-id">${r.segment_id}</td>
+      <td>${escapeHtml(textPreview)}</td>
+      <td><code>${escapeHtml(r.first_order_code)}</code></td>
+      <td>${r.code_type}</td>
+      <td class="auto-notes">${escapeHtml(r.notes || '')}</td>
+      <td><button class="action-btn small" onclick="editAutoCode('${r.segment_id}')">${t('auto_edit')}</button></td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="auto-review">
+      <h3>${t('auto_review_title')} (${records.length})</h3>
+      <table class="auto-review-table">
+        <thead><tr><th>ID</th><th>Tekst</th><th>Kod</th><th>Typ</th><th>Uzasadnienie</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function editAutoCode(segId) {
+  const record = state.codedRecords.find(r => r.segment_id === segId);
+  if (!record) return;
+
+  const row = event.target.closest('tr');
+  const codeCell = row.cells[2];
+  const typeCell = row.cells[3];
+  const btnCell = row.cells[5];
+  const oldCode = record.first_order_code;
+  const oldType = record.code_type;
+
+  codeCell.innerHTML = `<input type="text" class="auto-edit-input" id="editCode_${segId}" value="${escapeHtml(oldCode)}">`;
+  typeCell.innerHTML = `<select id="editType_${segId}">
+    <option value="descriptive" ${oldType === 'descriptive' ? 'selected' : ''}>descriptive</option>
+    <option value="in_vivo" ${oldType === 'in_vivo' ? 'selected' : ''}>in_vivo</option>
+    <option value="process" ${oldType === 'process' ? 'selected' : ''}>process</option>
+  </select>`;
+  btnCell.innerHTML = `
+    <button class="action-btn small" onclick="saveAutoEdit('${segId}')">${t('auto_save_edit')}</button>
+    <button class="action-btn small secondary" onclick="renderCodingView()">${t('auto_cancel_edit')}</button>`;
+}
+
+function saveAutoEdit(segId) {
+  const newCode = document.getElementById(`editCode_${segId}`)?.value.trim();
+  const newType = document.getElementById(`editType_${segId}`)?.value || 'descriptive';
+  if (!newCode) return;
+
+  const record = state.codedRecords.find(r => r.segment_id === segId);
+  if (!record) return;
+
+  record.first_order_code = newCode;
+  record.code_type = newType;
+  record.final_decision = 'modified';
+  registerCode(newCode, newType);
+  saveSession();
   renderCodingView();
 }
 
