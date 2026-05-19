@@ -587,12 +587,12 @@ function renderAutoView(panel) {
   let content = '';
 
   if (coded === 0) {
-    // Not started yet
+    // Not started yet — auto-start
     content = `
       <div class="auto-start-panel">
-        <p>${t('mode_auto_desc')}</p>
-        <button class="action-btn" onclick="runAutoCoding()">${t('auto_start')}</button>
+        <div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_progress')}</div>
       </div>`;
+    setTimeout(() => runAutoCoding(), 100);
   } else if (uncoded.length > 0) {
     // Partially done — offer to continue
     content = `
