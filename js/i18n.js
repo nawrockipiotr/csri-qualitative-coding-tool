@@ -40,8 +40,13 @@ const I18N = {
   info_gioia: { pl: 'Metodologia Gioia', en: 'Gioia methodology' },
   info_auto: { pl: 'Tryb automatyczny', en: 'Automatic mode' },
   info_auto_text: {
-    pl: 'AI koduje cały korpus automatycznie — segment po segmencie. Wyniki trafiają do tabeli przeglądu, gdzie badacz koryguje kody, typy i uzasadnienia. Tryb pozwala zobaczyć cały proces kodowania od razu, a potem przejść do samodzielnych trybów z większą wiedzą o danych.',
-    en: 'AI codes the entire corpus automatically — segment by segment. Results appear in a review table where the researcher can correct codes, types, and justifications. This mode lets you see the full coding process at once, then transition to independent modes with better knowledge of the data.'
+    pl: 'Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co 10 segmentów (drift check), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Badacz koryguje wyniki w tabeli przeglądu.',
+    en: 'Full automatic pipeline in 5 phases: (1) coding with context window (AI sees adjacent segments), (2) constant comparison every 10 segments (drift check), (3) multi-pass themes (generate → critique → revise), (4) abduction loop (re-coding in light of themes), (5) theoretically grounded dimensions. Saturation gate warns when new codes appear too rapidly. Researcher reviews and corrects results.'
+  },
+  info_import: { pl: 'Import danych', en: 'Data import' },
+  info_import_text: {
+    pl: 'Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Wiele plików tworzy wspólną pulę segmentów — każdy segment zachowuje oznaczenie pliku źródłowego. TXT: auto-detekcja tur mówców (Imię: tekst) lub podział na akapity. JSON: natywny format QCT lub dowolna tablica obiektów. CSV: automatyczne rozpoznanie kolumn (text/author/id). DOCX: ekstrakcja tekstu, segmentacja jak TXT. Przy imporcie do istniejącej sesji wybierasz: dodaj do puli (merge) lub zastąp.',
+    en: 'Drag & drop files (TXT, JSON, CSV, DOCX) or paste text. Multiple files create a shared segment pool — each segment retains its source file label. TXT: auto-detects speaker turns (Name: text) or splits by paragraphs. JSON: native QCT format or any object array. CSV: auto-detects columns (text/author/id). DOCX: text extraction, segmented like TXT. When importing into an existing session, choose: add to pool (merge) or replace.'
   },
   info_export: { pl: 'Eksport', en: 'Export' },
 
@@ -58,8 +63,8 @@ const I18N = {
     en: 'AI proposes a code for each segment. The researcher accepts, modifies, or rejects. Useful for large datasets or deductive coding with a conceptual framework.'
   },
   info_gioia_text: {
-    pl: 'Trzypoziomowa struktura: first-order concepts (kody empiryczne) → second-order themes (kategorie teoretyczne) → aggregate dimensions (wymiary zagregowane). Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.',
-    en: 'Three-level structure: first-order concepts (empirical codes) → second-order themes (theoretical categories) → aggregate dimensions. In-vivo codes shown in italics. Export to Markdown table.'
+    pl: 'Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.',
+    en: 'Three-level structure: first-order concepts (empirical codes, 15–25) → second-order themes (theoretical categories, 4–8) → aggregate dimensions (2–4). Each theme should group 2–6 codes at a higher abstraction level. Dimensions require theoretical grounding. In-vivo codes shown in italics. Export to Markdown table.'
   },
   info_export_text: {
     pl: 'JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). JSON jest kanonicznym formatem wymiany z pluginem Claude.',

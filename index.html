@@ -47,6 +47,7 @@
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoAssisted')" data-i18n="info_assisted">Tryb asystowany</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoGioia')" data-i18n="info_gioia">Metodologia Gioia</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoAuto')" data-i18n="info_auto">Tryb automatyczny</button>
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoImport')" data-i18n="info_import">Import danych</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoExport')" data-i18n="info_export">Eksport</button>
     </div>
 
@@ -61,10 +62,13 @@
       <div class="info-box"><div class="info-content" data-i18n="info_assisted_text">AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.</div></div>
     </div>
     <div class="info-panel" id="infoGioia">
-      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (kody empiryczne) → second-order themes (kategorie teoretyczne) → aggregate dimensions (wymiary zagregowane). Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (15–25) → second-order themes (4–8) → aggregate dimensions (2–4). Każdy temat grupuje 2–6 kodów. Wymiary wymagają uzasadnienia teoretycznego.</div></div>
     </div>
     <div class="info-panel" id="infoAuto">
-      <div class="info-box"><div class="info-content" data-i18n="info_auto_text">AI koduje cały korpus automatycznie — segment po segmencie. Wyniki trafiają do tabeli przeglądu, gdzie badacz koryguje kody, typy i uzasadnienia. Tryb pozwala zobaczyć cały proces kodowania od razu, a potem przejść do samodzielnych trybów z większą wiedzą o danych.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_auto_text">Pipeline w 5 fazach: kodowanie z kontekstem → drift check co 10 segmentów → wieloprzebiegowe tematy → pętla abdukcyjna → wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega gdy kody pojawiają się zbyt szybko.</div></div>
+    </div>
+    <div class="info-panel" id="infoImport">
+      <div class="info-box"><div class="info-content" data-i18n="info_import_text">Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Wiele plików = wspólna pula segmentów z oznaczeniem źródła. Przy imporcie do istniejącej sesji: dodaj do puli lub zastąp.</div></div>
     </div>
     <div class="info-panel" id="infoExport">
       <div class="info-box"><div class="info-content" data-i18n="info_export_text">JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). JSON jest kanonicznym formatem wymiany z pluginem Claude.</div></div>
