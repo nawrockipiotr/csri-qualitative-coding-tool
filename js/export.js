@@ -48,12 +48,12 @@ function exportJSON() {
 
 function exportCSV() {
   const codeToTheme = {};
-  for (const [theme, codes] of Object.entries(state.themes)) {
-    for (const c of codes) codeToTheme[c] = theme;
+  for (const [themeName, codes] of Object.entries(state.themes)) {
+    for (const c of codes) codeToTheme[c] = themeName;
   }
   const themeToDim = {};
-  for (const [dim, themes] of Object.entries(state.dimensions)) {
-    for (const t of themes) themeToDim[t] = dim;
+  for (const [dim, dimThemes] of Object.entries(state.dimensions)) {
+    for (const th of dimThemes) themeToDim[th] = dim;
   }
 
   const header = 'segment_id,text_primary,author,first_order_code,code_type,second_order_theme,aggregate_dimension,notes';
@@ -64,8 +64,8 @@ function exportCSV() {
             r.code_type, csvEsc(theme), csvEsc(dim), csvEsc(r.notes || '')].join(',');
   });
 
-  const csv = header + '\n' + rows.join('\n');
-  downloadFile(csv, `coding_export_${ts()}.csv`, 'text/csv');
+  const csv = '﻿' + header + '\n' + rows.join('\n');
+  downloadFile(csv, `coding_export_${ts()}.csv`, 'text/csv;charset=utf-8');
   document.getElementById('exportPreview').textContent = `CSV: ${rows.length} ${t('export_csv_rows')}`;
 }
 

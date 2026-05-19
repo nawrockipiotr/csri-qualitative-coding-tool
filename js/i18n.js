@@ -207,6 +207,15 @@ const I18N = {
   codebook_analyzing: { pl: 'Analizuję kody...', en: 'Analyzing codes...' },
   codebook_consolidation_title: { pl: 'Sugestie konsolidacji', en: 'Consolidation suggestions' },
   codebook_themes_title: { pl: 'Tematy 2nd-order', en: '2nd-order themes' },
+  codebook_dims_title: { pl: 'Wymiary zagregowane', en: 'Aggregate dimensions' },
+  theme_empty: { pl: 'Brak tematów — utwórz temat i przypisz kody.', en: 'No themes — create a theme and assign codes.' },
+  theme_name_placeholder: { pl: 'Nazwa tematu...', en: 'Theme name...' },
+  theme_create: { pl: 'Utwórz temat', en: 'Create theme' },
+  theme_add_code: { pl: '+ Dodaj kod...', en: '+ Add code...' },
+  dim_empty: { pl: 'Brak wymiarów — utwórz wymiar i przypisz tematy.', en: 'No dimensions — create a dimension and assign themes.' },
+  dim_name_placeholder: { pl: 'Nazwa wymiaru...', en: 'Dimension name...' },
+  dim_create: { pl: 'Utwórz wymiar', en: 'Create dimension' },
+  dim_add_theme: { pl: '+ Dodaj temat...', en: '+ Add theme...' },
 
   // Visualization
   viz_diagnostics: { pl: 'Diagnostyki', en: 'Diagnostics' },
@@ -308,9 +317,11 @@ function setLang(lang) {
     }
   });
 
-  // Update lang toggle button
-  const btn = document.getElementById('langToggle');
-  if (btn) btn.textContent = lang === 'pl' ? 'EN' : 'PL';
+  // Update lang toggle buttons
+  const btnPl = document.getElementById('langBtnPl');
+  const btnEn = document.getElementById('langBtnEn');
+  if (btnPl) btnPl.classList.toggle('active', lang === 'pl');
+  if (btnEn) btnEn.classList.toggle('active', lang === 'en');
 
   // Update model hint
   if (typeof currentProvider !== 'undefined') {
@@ -327,3 +338,8 @@ function setLang(lang) {
 function toggleLang() {
   setLang(currentLang === 'pl' ? 'en' : 'pl');
 }
+
+// Apply saved language on page load (after DOM is ready)
+document.addEventListener('DOMContentLoaded', () => {
+  if (currentLang !== 'pl') setLang(currentLang);
+});

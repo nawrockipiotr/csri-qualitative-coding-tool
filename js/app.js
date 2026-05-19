@@ -141,7 +141,7 @@ let currentView = 'setup';
 function showView(view) {
   currentView = view;
   document.querySelectorAll('.view-panel').forEach(p => p.style.display = 'none');
-  document.getElementById('view-' + view).style.display = '';
+  document.getElementById('view-' + view).style.display = 'block';
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   if (view === 'coding') renderCodingView();
   if (view === 'codebook') renderCodebookView();
@@ -216,8 +216,9 @@ function renderPreview() {
   const el = document.getElementById('previewArea');
   if (!state.segments.length) { el.innerHTML = ''; return; }
   const preview = state.segments.slice(0, 5).map(s => {
-    const speaker = s.author ? `<strong>${s.author}:</strong> ` : '';
-    const text = s.text_primary.length > 200 ? s.text_primary.substring(0, 200) + '...' : s.text_primary;
+    const speaker = s.author ? `<strong>${escapeHtml(s.author)}:</strong> ` : '';
+    const raw = s.text_primary.length > 200 ? s.text_primary.substring(0, 200) + '...' : s.text_primary;
+    const text = escapeHtml(raw);
     return `<div class="preview-segment"><span class="seg-id">${s.segment_id}</span> ${speaker}${text}</div>`;
   }).join('');
   el.innerHTML = `<div class="preview-header">${t('parse_preview')} (${Math.min(5, state.segments.length)} ${t('parse_of')} ${state.segments.length}):</div>${preview}`;
@@ -309,9 +310,9 @@ function renderCodingView() {
     <div class="segment-display">
       <div class="segment-meta">
         <span class="seg-id">${seg.segment_id}</span>
-        ${seg.author ? `<span class="seg-author">${seg.author}</span>` : ''}
+        ${seg.author ? `<span class="seg-author">${escapeHtml(seg.author)}</span>` : ''}
       </div>
-      <div class="segment-text">${seg.text_primary}</div>
+      <div class="segment-text">${escapeHtml(seg.text_primary)}</div>
     </div>
     ${modeHtml}
     <div class="recent-codes" id="recentCodes"></div>
@@ -408,6 +409,7 @@ async function getCounterProposal() {
   resultEl.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('coding_gen_counter')}</div>`;
 
   try {
+    abortController = new AbortController();
     const existingCodes = Object.keys(state.codebook);
     const systemPrompt = getCounterProposalPrompt(state.codingLang, state.researchQuestion, existingCodes);
     const userPrompt = `Fragment: ${seg.text_primary}\nKod badacza: ${code}`;
@@ -493,6 +495,7 @@ async function getAssistedProposal() {
   resultEl.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('coding_gen_proposal')}</div>`;
 
   try {
+    abortController = new AbortController();
     const existingCodes = Object.keys(state.codebook);
     const systemPrompt = getAssistedProposalPrompt(state.codingLang, state.researchQuestion, state.framework, existingCodes);
     const response = await callAIWithRetry(apiKey, systemPrompt, `Fragment: ${seg.text_primary}`);
@@ -601,11 +604,43 @@ function renderCodebookView() {
   const codes = Object.entries(state.codebook).sort((a, b) => b[1].frequency - a[1].frequency);
   const singletons = codes.filter(([, v]) => v.frequency === 1).length;
 
-  let themeHtml = '';
-  if (Object.keys(state.themes).length) {
-    themeHtml = `<h3>${t('codebook_themes_title')}</h3>` + Object.entries(state.themes).map(([name, tCodes]) =>
-      `<div class="theme-item"><strong>${name}</strong>: ${tCodes.map(c => `<code>${c}</code>`).join(', ')}</div>`
-    ).join('');
+  // Build themes UI
+  const allCodes = codes.map(([c]) => c);
+  const assignedCodes = new Set(Object.values(state.themes).flat());
+  const unassignedCodes = allCodes.filter(c => !assignedCodes.has(c));
+
+  let themeRows = '';
+  for (const [name, tCodes] of Object.entries(state.themes)) {
+    themeRows += `<div class="theme-card">
+      <div class="theme-header">
+        <strong>${escapeHtml(name)}</strong>
+        <button class="theme-remove-btn" onclick="removeTheme('${name.replace(/'/g, "\\'")}')" title="×">×</button>
+      </div>
+      <div class="theme-codes">${tCodes.map(c => `<span class="theme-code-tag">${escapeHtml(c)} <button class="tag-remove" onclick="removeCodeFromTheme('${name.replace(/'/g, "\\'")}','${c.replace(/'/g, "\\'")}')" title="×">×</button></span>`).join('')}</div>
+      <select class="theme-add-code" onchange="addCodeToTheme('${name.replace(/'/g, "\\'")}', this.value); this.value='';">
+        <option value="">${t('theme_add_code')}</option>
+        ${unassignedCodes.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+      </select>
+    </div>`;
+  }
+
+  // Build dimensions UI
+  const assignedThemes = new Set(Object.values(state.dimensions).flat());
+  const unassignedThemes = Object.keys(state.themes).filter(t2 => !assignedThemes.has(t2));
+
+  let dimRows = '';
+  for (const [name, dThemes] of Object.entries(state.dimensions)) {
+    dimRows += `<div class="theme-card dim-card">
+      <div class="theme-header">
+        <strong>${escapeHtml(name)}</strong>
+        <button class="theme-remove-btn" onclick="removeDimension('${name.replace(/'/g, "\\'")}')" title="×">×</button>
+      </div>
+      <div class="theme-codes">${dThemes.map(th => `<span class="theme-code-tag dim-tag">${escapeHtml(th)} <button class="tag-remove" onclick="removeThemeFromDimension('${name.replace(/'/g, "\\'")}','${th.replace(/'/g, "\\'")}')" title="×">×</button></span>`).join('')}</div>
+      <select class="theme-add-code" onchange="addThemeToDimension('${name.replace(/'/g, "\\'")}', this.value); this.value='';">
+        <option value="">${t('dim_add_theme')}</option>
+        ${unassignedThemes.map(th => `<option value="${escapeHtml(th)}">${escapeHtml(th)}</option>`).join('')}
+      </select>
+    </div>`;
   }
 
   panel.innerHTML = `
@@ -620,21 +655,107 @@ function renderCodebookView() {
       <thead><tr><th>${t('codebook_code')}</th><th>${t('codebook_type')}</th><th>${t('codebook_freq')}</th><th>${t('codebook_def')}</th></tr></thead>
       <tbody>${codes.map(([code, info]) => `
         <tr>
-          <td><code>${code}</code></td>
+          <td><code>${escapeHtml(code)}</code></td>
           <td>${info.type}</td>
           <td>${info.frequency}</td>
-          <td><input type="text" class="def-input" value="${info.definition || ''}" onchange="updateDefinition('${code.replace(/'/g, "\\'")}', this.value)"></td>
+          <td><input type="text" class="def-input" value="${escapeHtml(info.definition || '')}" onchange="updateDefinition('${code.replace(/'/g, "\\'")}', this.value)"></td>
         </tr>`).join('')}
       </tbody>
     </table>
-    ${state.codingMode !== 'inductive' ? `<button class="action-btn secondary" onclick="suggestConsolidation()">${t('codebook_consolidate')}</button>` : ''}
+    <button class="action-btn secondary" onclick="suggestConsolidation()">${t('codebook_consolidate')}</button>
     <div id="consolidationResult"></div>
-    ${themeHtml}
+
+    <h3>${t('codebook_themes_title')}</h3>
+    <div class="theme-manager">
+      ${themeRows || `<div class="empty-hint">${t('theme_empty')}</div>`}
+      <div class="theme-create-row">
+        <input type="text" id="newThemeName" placeholder="${t('theme_name_placeholder')}" onkeydown="if(event.key==='Enter')createTheme()">
+        <button class="action-btn secondary" onclick="createTheme()">${t('theme_create')}</button>
+      </div>
+    </div>
+
+    <h3>${t('codebook_dims_title')}</h3>
+    <div class="theme-manager">
+      ${dimRows || `<div class="empty-hint">${t('dim_empty')}</div>`}
+      <div class="theme-create-row">
+        <input type="text" id="newDimName" placeholder="${t('dim_name_placeholder')}" onkeydown="if(event.key==='Enter')createDimension()">
+        <button class="action-btn secondary" onclick="createDimension()">${t('dim_create')}</button>
+      </div>
+    </div>
   `;
 }
 
 function updateDefinition(code, def) {
   if (state.codebook[code]) { state.codebook[code].definition = def; saveSession(); }
+}
+
+// ─── Theme / Dimension CRUD ───
+function createTheme() {
+  const name = document.getElementById('newThemeName')?.value.trim();
+  if (!name || state.themes[name]) return;
+  state.themes[name] = [];
+  saveSession();
+  renderCodebookView();
+}
+
+function removeTheme(name) {
+  delete state.themes[name];
+  // Also remove from dimensions
+  for (const [dim, themes] of Object.entries(state.dimensions)) {
+    state.dimensions[dim] = themes.filter(t2 => t2 !== name);
+    if (!state.dimensions[dim].length) delete state.dimensions[dim];
+  }
+  saveSession();
+  renderCodebookView();
+}
+
+function addCodeToTheme(theme, code) {
+  if (!code || !state.themes[theme]) return;
+  // Remove from other themes first
+  for (const [t2, codes] of Object.entries(state.themes)) {
+    state.themes[t2] = codes.filter(c => c !== code);
+  }
+  state.themes[theme].push(code);
+  saveSession();
+  renderCodebookView();
+}
+
+function removeCodeFromTheme(theme, code) {
+  if (!state.themes[theme]) return;
+  state.themes[theme] = state.themes[theme].filter(c => c !== code);
+  saveSession();
+  renderCodebookView();
+}
+
+function createDimension() {
+  const name = document.getElementById('newDimName')?.value.trim();
+  if (!name || state.dimensions[name]) return;
+  state.dimensions[name] = [];
+  saveSession();
+  renderCodebookView();
+}
+
+function removeDimension(name) {
+  delete state.dimensions[name];
+  saveSession();
+  renderCodebookView();
+}
+
+function addThemeToDimension(dim, theme) {
+  if (!theme || !state.dimensions[dim]) return;
+  for (const [d2, themes] of Object.entries(state.dimensions)) {
+    state.dimensions[d2] = themes.filter(t2 => t2 !== theme);
+  }
+  state.dimensions[dim].push(theme);
+  saveSession();
+  renderCodebookView();
+}
+
+function removeThemeFromDimension(dim, theme) {
+  if (!state.dimensions[dim]) return;
+  state.dimensions[dim] = state.dimensions[dim].filter(t2 => t2 !== theme);
+  saveSession();
+  renderCodebookView();
 }
 
 async function suggestConsolidation() {
@@ -649,6 +770,7 @@ async function suggestConsolidation() {
     .map(([c, i]) => `- ${c} (${i.frequency}×)`).join('\n');
 
   try {
+    abortController = new AbortController();
     const response = await callAIWithRetry(apiKey, getConsolidationSuggestionsPrompt(), `Lista kodów:\n${codeList}`);
     el.innerHTML = `<div class="ai-result"><h4>${t('codebook_consolidation_title')}</h4><pre>${response}</pre></div>`;
   } catch (err) {
@@ -765,10 +887,13 @@ function loadSession() {
   return false;
 }
 
+// ─── Helpers ───
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
 // ─── Status / Error ───
 function showStatus(msg) {
   const el = document.getElementById('statusMsg');
-  if (el) { el.className = 'status-msg'; el.textContent = msg; el.style.display = ''; }
+  if (el) { el.className = 'status-msg'; el.textContent = msg; el.style.display = 'block'; }
 }
 
 function showError(msg) {
@@ -786,6 +911,25 @@ function showError(msg) {
 
 function restoreSession() {
   document.getElementById('sessionBar').style.display = 'none';
+  // Populate setup form from restored state
+  if (state.configured) {
+    const coderEl = document.getElementById('coderId');
+    if (coderEl) coderEl.value = state.coderId || '';
+    const langEl = document.getElementById('codingLang');
+    if (langEl) langEl.value = state.codingLang || 'pl';
+    const threshEl = document.getElementById('thresholdN');
+    if (threshEl) threshEl.value = state.thresholdN || 20;
+    const rqEl = document.getElementById('researchQuestion');
+    if (rqEl) rqEl.value = state.researchQuestion || '';
+    const fwEl = document.getElementById('framework');
+    if (fwEl) fwEl.value = state.framework || '';
+    const srcEl = document.getElementById('sourceType');
+    if (srcEl) srcEl.value = state.sourceType || 'interview';
+    const guidedEl = document.getElementById('guidedMode');
+    if (guidedEl) guidedEl.checked = !!state.guidedMode;
+    const modeRadio = document.querySelector(`input[name="codingMode"][value="${state.codingMode}"]`);
+    if (modeRadio) modeRadio.checked = true;
+  }
   showView(state.configured ? 'coding' : 'setup');
 }
 
