@@ -1257,6 +1257,17 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   margin-bottom: 0.75rem;
 }
 
+/* ═══ Coding export buttons ═══ */
+.coding-export-btns {
+  margin-left: auto;
+  display: flex;
+  gap: 0.3rem;
+}
+.coding-export-btns .nav-btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
 /* ═══ Pre-analysis briefing ═══ */
 .briefing-panel {
   background: var(--surface2);

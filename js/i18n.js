@@ -40,8 +40,8 @@ const I18N = {
   info_gioia: { pl: 'Metodologia Gioia', en: 'Gioia methodology' },
   info_auto: { pl: 'Tryb automatyczny', en: 'Automatic mode' },
   info_auto_text: {
-    pl: 'Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co 10 segmentów (drift check), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Badacz koryguje wyniki w tabeli przeglądu.',
-    en: 'Full automatic pipeline in 5 phases: (1) coding with context window (AI sees adjacent segments), (2) constant comparison every 10 segments (drift check), (3) multi-pass themes (generate → critique → revise), (4) abduction loop (re-coding in light of themes), (5) theoretically grounded dimensions. Saturation gate warns when new codes appear too rapidly. Researcher reviews and corrects results.'
+    pl: 'Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co N segmentów — batch size konfigurowalny w parametrach (domyślnie 10), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja, temperature=0 dla powtarzalności), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Przed startem wyświetlana jest analiza wstępna danych z sugestiami konfiguracji. Badacz koryguje wyniki w tabeli przeglądu — cofanie zmian przez Ctrl+Z.',
+    en: 'Full automatic pipeline in 5 phases: (1) coding with context window (AI sees adjacent segments), (2) constant comparison every N segments — batch size configurable in parameters (default 10), (3) multi-pass themes (generate → critique → revise, temperature=0 for reproducibility), (4) abduction loop (re-coding in light of themes), (5) theoretically grounded dimensions. Saturation gate warns when new codes appear too rapidly. Pre-analysis briefing with configuration suggestions shown before start. Researcher reviews and corrects results — undo changes with Ctrl+Z.'
   },
   info_import: { pl: 'Import danych', en: 'Data import' },
   info_import_text: {
@@ -51,8 +51,8 @@ const I18N = {
   info_export: { pl: 'Eksport', en: 'Export' },
 
   info_inductive_text: {
-    pl: 'Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.',
-    en: 'The researcher codes independently. Full control over the process — AI does not intervene. Recommended as a starting point, especially for experienced coders.'
+    pl: 'Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Nawigacja: ← → (skróty klawiszowe), cofanie: Ctrl+Z. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.',
+    en: 'The researcher codes independently. Full control over the process — AI does not intervene. Navigation: ← → (keyboard shortcuts), undo: Ctrl+Z. Recommended as a starting point, especially for experienced coders.'
   },
   info_counter_text: {
     pl: 'Badacz najpierw nadaje własny kod, potem AI proponuje alternatywę. Decyzja zawsze po stronie badacza: mój kod, propozycja AI, lub zmodyfikowany. Wymusza refleksję nad własnymi wyborami.',
@@ -67,8 +67,8 @@ const I18N = {
     en: 'Three-level structure: first-order concepts (empirical codes, 15–25) → second-order themes (theoretical categories, 4–8) → aggregate dimensions (2–4). Each theme should group 2–6 codes at a higher abstraction level. Dimensions require theoretical grounding. In-vivo codes shown in italics. Export to Markdown table.'
   },
   info_export_text: {
-    pl: 'JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). JSON jest kanonicznym formatem wymiany z pluginem Claude.',
-    en: 'JSON (full export with metadata), CSV (compatible with MAXQDA/NVivo), Gioia table (Markdown), coding report (stats and warnings). JSON is the canonical exchange format with the Claude plugin.'
+    pl: 'JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.',
+    en: 'JSON (full export with metadata), CSV (compatible with MAXQDA/NVivo), Gioia table (Markdown), coding report (stats and warnings). Codebook export (CSV) available in the Codebook tab. Quick coding export (CSV/JSON) available directly from the coding view. JSON is the canonical exchange format with the Claude plugin.'
   },
 
   // API Section

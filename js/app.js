@@ -669,6 +669,10 @@ function renderCodingView() {
       <span class="seg-counter">${state.currentIdx + 1} / ${total}</span>
       <button class="nav-btn-sm" onclick="nextSegment()" ${state.currentIdx >= total - 1 ? 'disabled' : ''}>${t('coding_next')}</button>
       ${alreadyCoded ? `<span class="coded-badge">${t('coding_already')}</span>` : ''}
+      ${coded > 0 ? `<span class="coding-export-btns">
+        <button class="nav-btn-sm" onclick="exportCSV()" title="${t('export_csv')}"><i data-lucide="table" class="icon-sm"></i></button>
+        <button class="nav-btn-sm" onclick="exportJSON()" title="${t('export_json')}"><i data-lucide="braces" class="icon-sm"></i></button>
+      </span>` : ''}
     </div>
     ${guidedHtml}
     <div class="segment-display">
@@ -1129,7 +1133,8 @@ async function runAutoCoding() {
 
 // ─── Batch drift check (constant comparison) ───
 async function runBatchDriftCheck(apiKey, batchEndIdx) {
-  const batch = state.codedRecords.slice(-10);
+  const batchN = state.batchSize || 10;
+  const batch = state.codedRecords.slice(-batchN);
   if (batch.length < 5) return; // too few for meaningful comparison
 
   const statusEl = document.getElementById('autoStatus');
