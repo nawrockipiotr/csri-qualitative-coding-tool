@@ -285,6 +285,15 @@ function renderCodingView() {
     </div>`;
   }
 
+  // Theme generation hint after threshold
+  if (coded >= state.thresholdN && !Object.keys(state.themes).length && coded % state.thresholdN === 0) {
+    guidedHtml += `<div class="guided-box guided-info">
+      <div class="guided-title"><i data-lucide="sparkles" class="icon-sm"></i> ${t('hint_themes_ready')}</div>
+      <p>${t('hint_themes_desc')}</p>
+      <button class="action-btn small" onclick="showView('codebook')">${t('hint_go_codebook')}</button>
+    </div>`;
+  }
+
   // Auto mode has its own full-page UI
   if (state.codingMode === 'auto') {
     renderAutoView(panel);
@@ -982,7 +991,9 @@ function renderCodebookView() {
       <div class="theme-create-row">
         <input type="text" id="newThemeName" placeholder="${t('theme_name_placeholder')}" onkeydown="if(event.key==='Enter')createTheme()">
         <button class="action-btn secondary" onclick="createTheme()">${t('theme_create')}</button>
+        <button class="action-btn" onclick="generateThemesAI()" ${codes.length < 3 ? 'disabled title="' + t('gen_themes_min') + '"' : ''}><i data-lucide="sparkles" class="icon-sm"></i> ${t('gen_themes_btn')}</button>
       </div>
+      <div id="aiThemesResult"></div>
     </div>
 
     <h3>${t('codebook_dims_title')}</h3>
@@ -991,7 +1002,9 @@ function renderCodebookView() {
       <div class="theme-create-row">
         <input type="text" id="newDimName" placeholder="${t('dim_name_placeholder')}" onkeydown="if(event.key==='Enter')createDimension()">
         <button class="action-btn secondary" onclick="createDimension()">${t('dim_create')}</button>
+        <button class="action-btn" onclick="generateDimensionsAI()" ${Object.keys(state.themes).length < 2 ? 'disabled title="' + t('gen_dims_min') + '"' : ''}><i data-lucide="sparkles" class="icon-sm"></i> ${t('gen_dims_btn')}</button>
       </div>
+      <div id="aiDimsResult"></div>
     </div>
   `;
 }
@@ -1089,6 +1102,99 @@ async function suggestConsolidation() {
   }
 }
 
+// ─── AI generation (standalone — available in all modes) ───
+async function generateThemesAI() {
+  const apiKey = document.getElementById('apiKey').value;
+  if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
+
+  const codes = Object.entries(state.codebook).filter(([, v]) => v.frequency > 0).sort((a, b) => b[1].frequency - a[1].frequency);
+  if (codes.length < 3) { showError(t('gen_themes_min')); return; }
+
+  const el = document.getElementById('aiThemesResult');
+  if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_themes_progress')}</div>`;
+
+  try {
+    abortController = new AbortController();
+    const systemPrompt = getAutoThemesPrompt(state.codingLang, state.researchQuestion, codes);
+    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate second-order themes from these ${codes.length} first-order codes.`);
+
+    // Parse THEME: / CODES: pairs
+    const lines = response.split('\n');
+    let currentTheme = '';
+    const newThemes = {};
+    for (const line of lines) {
+      if (line.toUpperCase().startsWith('THEME:') || line.toUpperCase().startsWith('TEMAT:')) {
+        currentTheme = line.split(':').slice(1).join(':').trim();
+      } else if ((line.toUpperCase().startsWith('CODES:') || line.toUpperCase().startsWith('KODY:')) && currentTheme) {
+        const allCodeNames = Object.keys(state.codebook);
+        const themeCodes = line.split(':').slice(1).join(':').split(',').map(c => c.trim()).map(c => {
+          if (state.codebook[c]) return c;
+          return allCodeNames.find(k => k.toLowerCase() === c.toLowerCase()) || null;
+        }).filter(Boolean);
+        if (themeCodes.length) newThemes[currentTheme] = themeCodes;
+        currentTheme = '';
+      }
+    }
+
+    if (Object.keys(newThemes).length) {
+      state.themes = newThemes;
+      saveSession();
+      if (currentView === 'codebook') renderCodebookView();
+      else if (currentView === 'visualization') renderVisualizationView();
+      if (el) el.innerHTML = `<div class="status-msg">${t('gen_themes_done')} ${Object.keys(newThemes).length}</div>`;
+    } else {
+      if (el) el.innerHTML = `<div class="error-msg">${t('gen_themes_fail')}</div>`;
+    }
+  } catch (err) {
+    if (el) el.innerHTML = `<div class="error-msg">${err.message}</div>`;
+  }
+}
+
+async function generateDimensionsAI() {
+  const apiKey = document.getElementById('apiKey').value;
+  if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
+
+  if (Object.keys(state.themes).length < 2) { showError(t('gen_dims_min')); return; }
+
+  const el = document.getElementById('aiDimsResult');
+  if (el) el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_dims_progress')}</div>`;
+
+  try {
+    abortController = new AbortController();
+    const systemPrompt = getAutoDimensionsPrompt(state.codingLang, state.researchQuestion, state.themes);
+    const response = await callAIWithRetry(apiKey, systemPrompt, `Generate aggregate dimensions from these ${Object.keys(state.themes).length} themes.`);
+
+    const lines = response.split('\n');
+    let currentDim = '';
+    const newDims = {};
+    for (const line of lines) {
+      if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
+        currentDim = line.split(':').slice(1).join(':').trim();
+      } else if ((line.toUpperCase().startsWith('THEMES:') || line.toUpperCase().startsWith('TEMATY:')) && currentDim) {
+        const allThemeNames = Object.keys(state.themes);
+        const dimThemes = line.split(':').slice(1).join(':').split(',').map(th => th.trim()).map(th => {
+          if (state.themes[th]) return th;
+          return allThemeNames.find(k => k.toLowerCase() === th.toLowerCase()) || null;
+        }).filter(Boolean);
+        if (dimThemes.length) newDims[currentDim] = dimThemes;
+        currentDim = '';
+      }
+    }
+
+    if (Object.keys(newDims).length) {
+      state.dimensions = newDims;
+      saveSession();
+      if (currentView === 'codebook') renderCodebookView();
+      else if (currentView === 'visualization') renderVisualizationView();
+      if (el) el.innerHTML = `<div class="status-msg">${t('gen_dims_done')} ${Object.keys(newDims).length}</div>`;
+    } else {
+      if (el) el.innerHTML = `<div class="error-msg">${t('gen_dims_fail')}</div>`;
+    }
+  } catch (err) {
+    if (el) el.innerHTML = `<div class="error-msg">${err.message}</div>`;
+  }
+}
+
 // ─── Visualization view ───
 function renderVisualizationView() {
   const panel = document.getElementById('view-visualization');
@@ -1119,7 +1225,10 @@ function renderVisualizationView() {
   }
 
   // Gioia table
-  let gioiaHtml = `<div class="empty-state">${t('viz_no_themes')}</div>`;
+  let gioiaHtml = `<div class="empty-state">
+    <p>${t('viz_no_themes')}</p>
+    ${totalCodes >= 3 ? `<button class="action-btn" onclick="generateThemesAI()"><i data-lucide="sparkles" class="icon-sm"></i> ${t('gen_themes_btn')}</button><div id="aiThemesResult"></div>` : ''}
+  </div>`;
   if (Object.keys(state.themes).length) {
     let rows = '';
     if (Object.keys(state.dimensions).length) {
@@ -1141,9 +1250,11 @@ function renderVisualizationView() {
         rows += `<tr><td>${codesStr}</td><td>${theme}</td><td></td></tr>`;
       }
     }
+    const noDims = !Object.keys(state.dimensions).length && Object.keys(state.themes).length >= 2;
     gioiaHtml = `<table class="gioia-table">
       <thead><tr><th>First-Order Concepts</th><th>Second-Order Themes</th><th>Aggregate Dimensions</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
+      <tbody>${rows}</tbody></table>
+      ${noDims ? `<div style="margin-top:0.75rem"><button class="action-btn" onclick="generateDimensionsAI()"><i data-lucide="sparkles" class="icon-sm"></i> ${t('gen_dims_btn')}</button><div id="aiDimsResult"></div></div>` : ''}`;
   }
 
   panel.innerHTML = `

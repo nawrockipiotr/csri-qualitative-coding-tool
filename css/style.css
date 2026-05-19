@@ -630,6 +630,8 @@ h1 {
 
 .guided-box.guided-warn { background: var(--yellow-dim); border-color: var(--yellow); }
 .guided-box.guided-ok { background: var(--green-dim); border-color: var(--green); }
+.guided-box.guided-info { background: #e8f4fd; border-color: var(--accent-teal); }
+.dark-mode .guided-box.guided-info { background: rgba(0,188,212,0.08); border-color: var(--accent-teal); }
 .guided-title { font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
 .guided-box p { margin-top: 0.3rem; }
 

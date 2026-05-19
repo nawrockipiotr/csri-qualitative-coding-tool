@@ -190,6 +190,50 @@ const I18N = {
     pl: 'Generowanie wymiarów zagregowanych...',
     en: 'Generating aggregate dimensions...'
   },
+  gen_themes_btn: {
+    pl: 'Wygeneruj tematy (AI)',
+    en: 'Generate themes (AI)'
+  },
+  gen_dims_btn: {
+    pl: 'Wygeneruj wymiary (AI)',
+    en: 'Generate dimensions (AI)'
+  },
+  gen_themes_min: {
+    pl: 'Potrzeba co najmniej 3 kodów do wygenerowania tematów.',
+    en: 'At least 3 codes are needed to generate themes.'
+  },
+  gen_dims_min: {
+    pl: 'Potrzeba co najmniej 2 tematów do wygenerowania wymiarów.',
+    en: 'At least 2 themes are needed to generate dimensions.'
+  },
+  gen_themes_done: {
+    pl: 'Wygenerowano tematów:',
+    en: 'Generated themes:'
+  },
+  gen_dims_done: {
+    pl: 'Wygenerowano wymiarów:',
+    en: 'Generated dimensions:'
+  },
+  gen_themes_fail: {
+    pl: 'Nie udało się wygenerować tematów. Spróbuj ponownie.',
+    en: 'Failed to generate themes. Try again.'
+  },
+  gen_dims_fail: {
+    pl: 'Nie udało się wygenerować wymiarów. Spróbuj ponownie.',
+    en: 'Failed to generate dimensions. Try again.'
+  },
+  hint_themes_ready: {
+    pl: 'Czas na tematy',
+    en: 'Time for themes'
+  },
+  hint_themes_desc: {
+    pl: 'Zakodowałeś wystarczającą liczbę segmentów. Przejdź do Codebook, żeby wygenerować tematy 2nd-order z AI lub stworzyć je ręcznie.',
+    en: 'You have coded enough segments. Go to Codebook to generate second-order themes with AI or create them manually.'
+  },
+  hint_go_codebook: {
+    pl: 'Przejdź do Codebook',
+    en: 'Go to Codebook'
+  },
   setup_params: { pl: 'Parametry', en: 'Parameters' },
   setup_coder_id: { pl: 'ID kodera', en: 'Coder ID' },
   setup_code_lang: { pl: 'Język kodów', en: 'Code language' },
