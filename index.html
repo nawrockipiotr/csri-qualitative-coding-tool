@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="version" content="v0.1">
+<title>Qualitative Coding Tool</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-top-row">
+      <div class="org-badge">Centre for Socially Responsible Innovations (CSRI)</div>
+      <div style="display:flex;gap:0.4rem;">
+        <button class="lang-toggle" id="langToggle" onclick="toggleLang()" title="Switch language">EN</button>
+        <button class="dark-toggle" id="darkToggle" onclick="toggleDarkMode()" title="Toggle dark mode"><i data-lucide="moon" class="icon-sm"></i> Dark</button>
+      </div>
+    </div>
+
+    <h1>Qualitative Coding Tool <span class="version-tag">v0.1</span></h1>
+    <p class="hero-lead" data-i18n="hero_lead">
+      Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Trzy tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany), eksport do JSON/CSV/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.
+    </p>
+
+    <!-- How to use — collapsible -->
+    <details class="info-box howto-details" id="howtoBox" open>
+      <summary class="info-title"><span data-i18n="hero_howto_title">Jak korzystać z narzędzia</span> <span class="howto-hide-hint" data-i18n="hero_howto_hide">(kliknij, aby ukryć)</span></summary>
+      <div class="info-content">
+        <strong>1.</strong> <span data-i18n="howto_step1">Wklej klucz API wybranego dostawcy AI (Anthropic, OpenAI, Google) lub połącz z lokalnym modelem.</span><br>
+        <strong>2.</strong> <span data-i18n="howto_step2">Wklej dane źródłowe (transkrypcje, notatki, JSON z Transcript Tool) i skonfiguruj tryb kodowania.</span><br>
+        <strong>3.</strong> <span data-i18n="howto_step3">Koduj segment po segmencie. W trybie indukcyjnym kodujesz sam, w pozostałych AI wspiera Twoje decyzje.</span><br>
+        <strong>4.</strong> <span data-i18n="howto_step4">Zarządzaj codebookiem, buduj tematy 2nd-order i wymiary. Eksportuj do JSON, CSV lub tabeli Gioia.</span>
+      </div>
+    </details>
+
+    <!-- Collapsible feature info buttons -->
+    <div class="info-toggles">
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoInductive')" data-i18n="info_inductive">Tryb indukcyjny</button>
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoCounter')" data-i18n="info_counter">Kontrpropozycja</button>
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoAssisted')" data-i18n="info_assisted">Tryb asystowany</button>
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoGioia')" data-i18n="info_gioia">Metodologia Gioia</button>
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoExport')" data-i18n="info_export">Eksport</button>
+    </div>
+
+    <!-- Info panels -->
+    <div class="info-panel" id="infoInductive">
+      <div class="info-box"><div class="info-content" data-i18n="info_inductive_text">Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.</div></div>
+    </div>
+    <div class="info-panel" id="infoCounter">
+      <div class="info-box"><div class="info-content" data-i18n="info_counter_text">Badacz najpierw nadaje własny kod, potem AI proponuje alternatywę. Decyzja zawsze po stronie badacza: mój kod, propozycja AI, lub zmodyfikowany. Wymusza refleksję nad własnymi wyborami.</div></div>
+    </div>
+    <div class="info-panel" id="infoAssisted">
+      <div class="info-box"><div class="info-content" data-i18n="info_assisted_text">AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.</div></div>
+    </div>
+    <div class="info-panel" id="infoGioia">
+      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (kody empiryczne) → second-order themes (kategorie teoretyczne) → aggregate dimensions (wymiary zagregowane). Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.</div></div>
+    </div>
+    <div class="info-panel" id="infoExport">
+      <div class="info-box"><div class="info-content" data-i18n="info_export_text">JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). JSON jest kanonicznym formatem wymiany z pluginem Claude.</div></div>
+    </div>
+
+    <div class="hero-author">Qualitative Coding Tool · by Piotr Nawrocki</div>
+  </div>
+  <div class="hero-bar"></div>
+
+  <!-- API Key -->
+  <div class="api-section">
+    <label data-i18n="api_provider">Dostawca AI</label>
+    <div class="provider-tabs">
+      <button class="provider-tab active" data-provider="anthropic" onclick="setProvider('anthropic')">Anthropic (Claude)</button>
+      <button class="provider-tab" data-provider="openai" onclick="setProvider('openai')">OpenAI (ChatGPT)</button>
+      <button class="provider-tab" data-provider="google" onclick="setProvider('google')">Google (Gemini)</button>
+      <button class="provider-tab" data-provider="local" onclick="setProvider('local')">Local</button>
+    </div>
+    <label id="apiKeyLabel">Anthropic API Key</label>
+    <div class="api-row">
+      <input type="password" id="apiKey" placeholder="sk-ant-..." />
+    </div>
+    <div id="localFields" style="display: none;">
+      <label class="local-field-label" data-i18n="api_local_endpoint">Endpoint serwera</label>
+      <div class="api-row">
+        <input type="text" id="localEndpoint" placeholder="http://localhost:11434/v1" value="http://localhost:11434/v1" />
+      </div>
+      <div class="api-hint" data-i18n="api_local_endpoint_hint">Endpoint kompatybilny z OpenAI. Ollama: localhost:11434/v1 · LM Studio: localhost:1234/v1</div>
+      <label class="local-field-label" data-i18n="api_local_model">Nazwa modelu</label>
+      <div class="api-row">
+        <input type="text" id="localModel" placeholder="e.g. llama3.1, mistral, gemma2" />
+      </div>
+      <div class="api-hint" data-i18n="api_local_model_hint">Nazwa modelu zarejestrowana na serwerze (uruchom <code class="code-inline">ollama list</code>).</div>
+    </div>
+    <label class="save-check">
+      <input type="checkbox" id="saveKey" /> <span data-i18n="api_save">Zapisz ustawienia w przeglądarce</span>
+    </label>
+    <div class="api-key-security" id="apiKeySecurity"><i data-lucide="lock" class="icon-xs"></i> <span data-i18n="api_security">Klucz przechowywany tylko w tej przeglądarce · wysyłany wyłącznie do wybranego dostawcy · nigdy nie udostępniany</span></div>
+    <div class="api-hint api-data-warning"><i data-lucide="alert-triangle" class="icon-xs"></i> <span data-i18n="api_data_warning">Przy dostawcach chmurowych treść danych jest przesyłana na ich serwery — upewnij się, że jest to zgodne z Twoimi obowiązkami ochrony danych.</span></div>
+    <label class="quality-check">
+      <input type="checkbox" id="highQuality" style="accent-color: var(--accent);" />
+      <span style="font-weight: 600;" data-i18n="api_hq">Użyj modelu wyższej jakości</span>
+    </label>
+    <div class="api-hint" id="modelHint" data-i18n="hint_anthropic">Domyślnie: Claude Haiku (szybki, tani). Wyższa jakość: Claude Sonnet (lepsza dokładność kodowania, ~10× droższy).</div>
+  </div>
+
+  <!-- Session restore bar -->
+  <div class="session-bar" id="sessionBar" style="display:none;">
+    <span><i data-lucide="clipboard-list" class="icon-sm"></i> <span data-i18n="session_found">Znaleziono niezakończoną sesję kodowania.</span></span>
+    <button class="session-bar-btn" onclick="restoreSession()" data-i18n="session_restore">Przywróć</button>
+    <button class="session-bar-dismiss" onclick="dismissSession()">×</button>
+  </div>
+
+  <!-- Error message -->
+  <div class="error-msg" id="errorMsg" role="alert" aria-live="assertive"></div>
+
+  <!-- Main navigation -->
+  <div class="main-nav">
+    <button class="nav-btn active" data-view="setup" onclick="showView('setup')" data-i18n="nav_setup">Konfiguracja</button>
+    <button class="nav-btn" data-view="coding" onclick="showView('coding')" data-i18n="nav_coding">Kodowanie</button>
+    <button class="nav-btn" data-view="codebook" onclick="showView('codebook')" data-i18n="nav_codebook">Codebook</button>
+    <button class="nav-btn" data-view="visualization" onclick="showView('visualization')" data-i18n="nav_visualization">Wizualizacja</button>
+    <button class="nav-btn" data-view="export" onclick="showView('export')" data-i18n="nav_export">Eksport</button>
+  </div>
+
+  <!-- ═══ SETUP ═══ -->
+  <div id="view-setup" class="view-panel" style="display:block">
+
+    <div class="setup-section">
+      <label data-i18n="setup_source_data">Dane źródłowe (wklej tekst lub JSON)</label>
+      <textarea id="importText" data-i18n="setup_source_placeholder" placeholder="Wklej transkrypcję, notatki terenowe, dane z Transcript Tool (JSON)..."></textarea>
+      <button class="action-btn secondary" onclick="parseImportData()" data-i18n="setup_parse">Parsuj dane</button>
+      <div id="statusMsg" class="status-msg" style="display:none"></div>
+      <div id="previewArea"></div>
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="setup_source_type">Typ źródła</label>
+      <select id="sourceType">
+        <option value="interview" data-i18n="source_interview">Wywiad</option>
+        <option value="focus_group" data-i18n="source_focus">Focus group</option>
+        <option value="field_notes" data-i18n="source_field">Notatki terenowe</option>
+        <option value="document" data-i18n="source_document">Dokument</option>
+        <option value="other" data-i18n="source_other">Inny</option>
+      </select>
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="setup_coding_mode">Tryb kodowania</label>
+      <div class="mode-options">
+        <label class="mode-option">
+          <input type="radio" name="codingMode" value="inductive" checked>
+          <div>
+            <div class="mode-label" data-i18n="mode_inductive">Indukcyjny</div>
+            <div class="mode-desc" data-i18n="mode_inductive_desc">Badacz koduje samodzielnie, bez AI. Pełna kontrola nad procesem.</div>
+          </div>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="codingMode" value="counter_proposal">
+          <div>
+            <div class="mode-label" data-i18n="mode_counter">Kontrpropozycja</div>
+            <div class="mode-desc" data-i18n="mode_counter_desc">Badacz koduje, AI proponuje alternatywę. Decyzja zawsze po stronie badacza.</div>
+          </div>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="codingMode" value="assisted">
+          <div>
+            <div class="mode-label" data-i18n="mode_assisted">Asystowany</div>
+            <div class="mode-desc" data-i18n="mode_assisted_desc">AI proponuje kod, badacz akceptuje/modyfikuje/odrzuca.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="setup_params">Parametry</label>
+      <div class="params-row">
+        <div>
+          <label data-i18n="setup_coder_id">ID kodera</label>
+          <input type="text" id="coderId" placeholder="np. PN01">
+        </div>
+        <div>
+          <label data-i18n="setup_code_lang">Język kodów</label>
+          <select id="codingLang">
+            <option value="pl">Polski</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+      <div class="params-row">
+        <div>
+          <label data-i18n="setup_threshold">Próg konsolidacji (N)</label>
+          <input type="number" id="thresholdN" value="20" min="5" max="100">
+        </div>
+        <div>
+          <label class="save-check" style="margin-top:1.6rem">
+            <input type="checkbox" id="guidedMode"> <span data-i18n="setup_guided">Guided mode</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="setup_rq">Pytanie badawcze (opcjonalnie)</label>
+      <input type="text" id="researchQuestion" data-i18n="setup_rq_placeholder" placeholder="np. Jak pracownicy doświadczają zmiany organizacyjnej?">
+    </div>
+
+    <div class="setup-section">
+      <label data-i18n="setup_framework">Framework / kody a priori (opcjonalnie, tryb asystowany)</label>
+      <textarea id="framework" data-i18n="setup_framework_placeholder" placeholder="Lista kodów lub opis ramy pojęciowej..." style="min-height:60px"></textarea>
+    </div>
+
+    <button class="action-btn" onclick="confirmSetup()" style="width:100%" data-i18n="setup_start">Rozpocznij kodowanie</button>
+  </div>
+
+  <!-- ═══ CODING ═══ -->
+  <div id="view-coding" class="view-panel">
+    <div class="empty-state" data-i18n="empty_setup">Najpierw skonfiguruj projekt w zakładce Konfiguracja.</div>
+  </div>
+
+  <!-- ═══ CODEBOOK ═══ -->
+  <div id="view-codebook" class="view-panel">
+    <div class="empty-state" data-i18n="empty_codes">Brak kodów — zacznij kodowanie.</div>
+  </div>
+
+  <!-- ═══ VISUALIZATION ═══ -->
+  <div id="view-visualization" class="view-panel">
+    <div class="empty-state" data-i18n="empty_data">Brak danych do wizualizacji.</div>
+  </div>
+
+  <!-- ═══ EXPORT ═══ -->
+  <div id="view-export" class="view-panel">
+    <div class="empty-state" data-i18n="empty_export">Brak danych do eksportu.</div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/prompts.js"></script>
+<script src="js/api.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>
