@@ -166,6 +166,14 @@ const I18N = {
     pl: 'Anuluj',
     en: 'Cancel'
   },
+  auto_themes_progress: {
+    pl: 'Generowanie tematów 2nd-order...',
+    en: 'Generating second-order themes...'
+  },
+  auto_dims_progress: {
+    pl: 'Generowanie wymiarów zagregowanych...',
+    en: 'Generating aggregate dimensions...'
+  },
   setup_params: { pl: 'Parametry', en: 'Parameters' },
   setup_coder_id: { pl: 'ID kodera', en: 'Coder ID' },
   setup_code_lang: { pl: 'Język kodów', en: 'Code language' },

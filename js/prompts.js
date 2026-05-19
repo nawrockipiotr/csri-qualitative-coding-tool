@@ -66,6 +66,46 @@ TYPE: descriptive | in_vivo | process
 JUSTIFICATION: [1 sentence]`;
 }
 
+function getAutoThemesPrompt(codingLang, researchQuestion, codes) {
+  const codeList = codes.map(([c, info]) => `${c} (${info.frequency}×, ${info.type})`).join('\n');
+  return `You are a qualitative research expert applying the Gioia methodology.
+Given the list of first-order codes below, group them into second-order themes.
+
+RULES:
+- Each theme should group 2-6 related first-order codes.
+- Theme names should be more abstract than the codes — theoretical categories, not descriptive labels.
+- Every code must be assigned to exactly one theme.
+- Language: ${codingLang}.
+${researchQuestion ? `Research question: ${researchQuestion}` : ''}
+
+FIRST-ORDER CODES:
+${codeList}
+
+RESPONSE FORMAT (strict, repeat for each theme):
+THEME: [theme name]
+CODES: [code1], [code2], [code3]`;
+}
+
+function getAutoDimensionsPrompt(codingLang, researchQuestion, themes) {
+  const themeList = Object.entries(themes).map(([th, codes]) => `${th}: ${codes.join(', ')}`).join('\n');
+  return `You are a qualitative research expert applying the Gioia methodology.
+Given the second-order themes below, group them into aggregate dimensions.
+
+RULES:
+- Each dimension should group 2-4 related themes.
+- Dimension names should be the highest level of abstraction — core theoretical constructs.
+- Every theme must be assigned to exactly one dimension.
+- Language: ${codingLang}.
+${researchQuestion ? `Research question: ${researchQuestion}` : ''}
+
+SECOND-ORDER THEMES:
+${themeList}
+
+RESPONSE FORMAT (strict, repeat for each dimension):
+DIMENSION: [dimension name]
+THEMES: [theme1], [theme2]`;
+}
+
 function getDriftCheckPrompt() {
   return `You are a qualitative coding consistency checker. Compare the two coded segments below.
 They appear to contain similar content but received different codes.
