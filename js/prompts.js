@@ -1,5 +1,11 @@
 // ─── Qualitative Coding Tool v0.1 — Prompts ───
 
+// Helper: strict language enforcement instruction
+function langRule(codingLang) {
+  if (codingLang === 'pl') return 'CRITICAL: All output — code names, theme names, dimension names, justifications — MUST be in Polish. Do NOT use English, Russian, Ukrainian, or any other language.';
+  return 'CRITICAL: All output — code names, theme names, dimension names, justifications — MUST be in English.';
+}
+
 // Helper: build context window string from surrounding segments
 function buildContextWindow(segments, currentIdx) {
   const parts = [];
@@ -23,7 +29,7 @@ RULES:
 - Highlight a different perspective or aspect of the segment.
 - Use the surrounding context (if provided) to better understand the segment's meaning, but code ONLY the target segment.
 - If your proposal would be identical — say so explicitly.
-- Code language: ${codingLang}.
+- ${langRule(codingLang)}
 - Justification: 1-2 sentences.
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 ${existingCodes.length ? `Existing codes: ${existingCodes.slice(0, 30).join(', ')}` : ''}
@@ -39,7 +45,7 @@ function getAssistedProposalPrompt(codingLang, researchQuestion, framework, exis
 RULES:
 - If a codebook/framework is provided — match the segment to an existing code or propose a new one with justification.
 - Use the surrounding context (if provided) to better understand the segment's meaning, but code ONLY the target segment.
-- Code language: ${codingLang}.
+- ${langRule(codingLang)}
 - Justification: 1-2 sentences.
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 ${framework ? `Conceptual framework / a priori codes:\n${framework}` : ''}
@@ -71,7 +77,7 @@ RULES:
 - Prefer lower-abstraction, empirically grounded codes (first-order concepts).
 - Mark codes derived directly from participant language as in_vivo.
 - Use the surrounding context (if provided) to better understand the segment's meaning, but code ONLY the target segment.
-- Code language: ${codingLang}.
+- ${langRule(codingLang)}
 - Justification: 1 sentence — why this code captures the segment's meaning.
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 ${framework ? `Conceptual framework / a priori codes:\n${framework}` : ''}
@@ -92,7 +98,7 @@ RULES:
 - Compare segments within the batch for semantic similarity.
 - Flag pairs where similar content received different codes.
 - For each flagged pair, determine: is the difference justified (genuinely different phenomena) or is it drift (same phenomenon, different labels)?
-- Language: ${codingLang}.
+- ${langRule(codingLang)}
 - If all codes are consistent, say so explicitly.
 
 RESPONSE FORMAT (strict):
@@ -115,7 +121,7 @@ RULES:
 - Each theme should group 2-6 related first-order codes.
 - Theme names should be more abstract than the codes — theoretical categories, not descriptive labels.
 - Every code must be assigned to exactly one theme.
-- Language: ${codingLang}.
+- ${langRule(codingLang)}
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 
 FIRST-ORDER CODES:
@@ -145,7 +151,7 @@ CRITIQUE CHECKLIST:
 5. MISSING: Is there a clear pattern in the codes that no theme captures?
 6. GRANULARITY: Are there too many themes (>8 for <30 codes) or too few (<3 for >15 codes)?
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
-- Language: ${codingLang}.
+- ${langRule(codingLang)}
 
 RESPONSE FORMAT (strict):
 For each issue found:
@@ -174,7 +180,7 @@ RULES:
 - Address every issue raised in the critique.
 - Every code must still be assigned to exactly one theme.
 - Theme names should be theoretical categories at a higher abstraction level than codes.
-- Language: ${codingLang}.
+- ${langRule(codingLang)}
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 
 RESPONSE FORMAT (strict, repeat for each theme):
@@ -198,7 +204,7 @@ TASK:
 3. Does the segment clearly belong to the theme its code is assigned to?
 4. If the segment doesn't fit ANY theme — flag it as ORPHAN.
 
-- Language: ${codingLang}.
+- ${langRule(codingLang)}
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 
 RESPONSE FORMAT (strict):
@@ -219,7 +225,7 @@ RULES:
 - Dimension names should be the highest level of abstraction — core theoretical constructs.
 - Every theme must be assigned to exactly one dimension.
 - For each dimension, explain its theoretical grounding: how does it connect to existing theory or literature relevant to the research question?
-- Language: ${codingLang}.
+- ${langRule(codingLang)}
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
 ${framework ? `Theoretical framework provided by researcher:\n${framework}` : ''}
 

@@ -725,7 +725,15 @@ h1 {
 
 .stat-card .stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent-teal); }
 .stat-card .stat-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; }
+/* Code table wrapper — scrollable for large codebooks */
+.code-table-wrap {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid var(--surface2);
+  border-radius: 8px;
+}
 .code-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.code-table thead { position: sticky; top: 0; z-index: 1; background: var(--bg); }
 
 .code-table th {
   text-align: left;
@@ -814,7 +822,16 @@ h1 {
 .diag-info { background: var(--blue-dim); color: var(--blue); }
 
 /* Gioia table */
-.gioia-table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; }
+/* Gioia table wrapper — scrollable for large structures */
+.gioia-table-wrap {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid var(--surface2);
+  border-radius: 8px;
+  margin: 0.75rem 0;
+}
+.gioia-table { width: 100%; border-collapse: collapse; }
+.gioia-table thead { position: sticky; top: 0; z-index: 1; background: var(--bg); }
 
 .gioia-table th {
   background: var(--accent-teal-dim);
@@ -1291,6 +1308,10 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
 .dark-mode .drift-seg { background: var(--surface2); }
 .dark-mode .codebook-filter { background: var(--surface2); color: var(--text); }
 .dark-mode .briefing-panel { background: var(--surface); }
+.dark-mode .code-table thead { background: var(--surface); }
+.dark-mode .gioia-table thead { background: var(--surface); }
+.dark-mode .code-table-wrap { border-color: var(--border); }
+.dark-mode .gioia-table-wrap { border-color: var(--border); }
 
 /* ═══ Responsive ═══ */
 @media (max-width: 600px) {

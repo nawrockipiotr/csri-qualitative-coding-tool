@@ -1598,7 +1598,7 @@ function renderCodebookView() {
       <button class="undo-btn" onclick="exportCodebook()">${t('codebook_export_btn')}</button>
     </div>
     <input type="text" class="codebook-filter" id="codebookFilter" placeholder="${t('codebook_filter_placeholder')}" oninput="filterCodebook(this.value)">
-    <table class="code-table" id="codeTable">
+    <div class="code-table-wrap"><table class="code-table" id="codeTable">
       <thead><tr><th>${t('codebook_code')}</th><th>${t('codebook_type')}</th><th>${t('codebook_freq')}</th><th>${t('codebook_def')}</th></tr></thead>
       <tbody>${codes.map(([code, info]) => `
         <tr data-code="${escapeHtml(code.toLowerCase())}">
@@ -1608,7 +1608,7 @@ function renderCodebookView() {
           <td><input type="text" class="def-input" value="${escapeHtml(info.definition || '')}" onchange="updateDefinition('${code.replace(/'/g, "\\'")}', this.value)"></td>
         </tr>`).join('')}
       </tbody>
-    </table>
+    </table></div>
     <button class="action-btn secondary" onclick="suggestConsolidation()">${t('codebook_consolidate')}</button>
     <div id="consolidationResult"></div>
 
@@ -1987,9 +1987,9 @@ function renderVisualizationView() {
       }
     }
     const noDims = !Object.keys(state.dimensions).length && Object.keys(state.themes).length >= 2;
-    gioiaHtml = `<table class="gioia-table">
-      <thead><tr><th>First-Order Concepts</th><th>Second-Order Themes</th><th>Aggregate Dimensions</th></tr></thead>
-      <tbody>${rows}</tbody></table>
+    gioiaHtml = `<div class="gioia-table-wrap"><table class="gioia-table">
+      <thead><tr><th>${t('gioia_col_codes')}</th><th>${t('gioia_col_themes')}</th><th>${t('gioia_col_dims')}</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
       ${noDims ? `<div style="margin-top:0.75rem"><button class="action-btn" onclick="generateDimensionsAI()"><i data-lucide="sparkles" class="icon-sm"></i> ${t('gen_dims_btn')}</button><div id="aiDimsResult"></div></div>` : ''}`;
   }
 

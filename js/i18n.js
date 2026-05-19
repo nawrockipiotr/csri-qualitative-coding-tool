@@ -555,6 +555,10 @@ const I18N = {
     pl: '⚠ Segmenty bardzo długie (>2000 zn.) — rozważ podział na mniejsze jednostki',
     en: '⚠ Segments very long (>2000 chars) — consider splitting into smaller units'
   },
+  // Gioia table columns
+  gioia_col_codes: { pl: 'Koncepty pierwszego rzędu', en: 'First-order concepts' },
+  gioia_col_themes: { pl: 'Tematy drugiego rzędu', en: 'Second-order themes' },
+  gioia_col_dims: { pl: 'Wymiary zagregowane', en: 'Aggregate dimensions' },
 };
 
 function t(key) {
