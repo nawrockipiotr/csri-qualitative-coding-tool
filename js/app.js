@@ -1674,13 +1674,31 @@ function exportCodebook() {
 }
 
 // ─── Drift resolution ───
+// Resolve segment ID — strip brackets, expand ranges like S0508-S0512
+function resolveSegIds(raw) {
+  const clean = raw.replace(/^\[|\]$/g, '');
+  const rangeMatch = clean.match(/^([A-Za-z]*)(\d+)-\1?(\d+)$/);
+  if (rangeMatch) {
+    const [, prefix, startStr, endStr] = rangeMatch;
+    const start = parseInt(startStr), end = parseInt(endStr);
+    const pad = startStr.length;
+    const ids = [];
+    for (let i = start; i <= end; i++) ids.push(prefix + String(i).padStart(pad, '0'));
+    return ids;
+  }
+  return [clean];
+}
+
 function recodeDrift(segId, newCode, btn) {
-  const record = state.codedRecords.find(r => r.segment_id === segId);
-  if (!record) return;
+  const ids = resolveSegIds(segId);
+  const records = state.codedRecords.filter(r => ids.includes(r.segment_id));
+  if (!records.length) return;
   pushUndo('recodeDrift');
-  const oldCode = record.first_order_code;
-  record.first_order_code = newCode;
-  record.notes = (record.notes || '') + ` [drift recode: ${oldCode} → ${newCode}]`;
+  for (const record of records) {
+    const oldCode = record.first_order_code;
+    record.first_order_code = newCode;
+    record.notes = (record.notes || '') + ` [drift recode: ${oldCode} → ${newCode}]`;
+  }
   recalcAllFrequencies();
   saveSession();
   // Mark as resolved
@@ -1688,7 +1706,7 @@ function recodeDrift(segId, newCode, btn) {
   if (detail) {
     detail.classList.add('merge-applied');
     const actions = detail.querySelector('.drift-actions');
-    if (actions) actions.innerHTML = `<span class="merge-done-badge">✓ ${escapeHtml(segId)} → ${escapeHtml(newCode)}</span>`;
+    if (actions) actions.innerHTML = `<span class="merge-done-badge">✓ ${escapeHtml(segId)} → ${escapeHtml(newCode)} (${records.length})</span>`;
   }
 }
 
@@ -2115,13 +2133,24 @@ function renderVisualizationView() {
         const dLine = typeof d === 'string' ? d : d.line;
         const dType = typeof d === 'object' ? (d.type || '') : '';
         const dSuggestion = typeof d === 'object' ? (d.suggestion || '') : '';
-        const match = dLine.match(/DRIFT:\s*(\S+)\s*\(code:\s*([^)]+)\)\s*↔\s*(\S+)\s*\(code:\s*([^)]+)\)/i);
+        // Parse DRIFT line: extract two segment groups and their codes
+        // Format variants: DRIFT: [S01] (code: x) ↔ [S02] (code: y)
+        //                  DRIFT: [S01] (code: x) ↔ [S02], [S03], [S04] (code: y)
+        //                  DRIFT: [S01-S05] (code: x) ↔ [S06-S10] (code: y)
+        const match = dLine.match(/DRIFT:\s*(.+?)\s*\(code:\s*([^)]+)\)\s*↔\s*(.+?)\s*\(code:\s*([^)]+)\)/i);
         if (match) {
-          const [, seg1, code1, seg2, code2] = match;
+          const [, seg1raw, code1, seg2raw, code2] = match;
+          const seg1 = seg1raw.trim(), seg2 = seg2raw.trim();
           // Skip false positives — same code on both segments
           if (code1.trim() === code2.trim()) return '';
-          const r1 = state.codedRecords.find(r => r.segment_id === seg1);
-          const r2 = state.codedRecords.find(r => r.segment_id === seg2);
+          // Resolve all segment IDs from each group (handles ranges, lists, brackets)
+          const parseSegGroup = (raw) => {
+            const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+            return parts.flatMap(p => resolveSegIds(p));
+          };
+          const ids1 = parseSegGroup(seg1), ids2 = parseSegGroup(seg2);
+          const r1 = state.codedRecords.find(r => ids1.includes(r.segment_id));
+          const r2 = state.codedRecords.find(r => ids2.includes(r.segment_id));
           const typeBadge = dType ? `<span class="drift-type drift-type-${dType.toLowerCase()}">${escapeHtml(dType)}</span>` : '';
           const suggestionLine = dSuggestion ? `<div class="drift-suggestion">${escapeHtml(dSuggestion)}</div>` : '';
           // Recode buttons: recode seg1→code2, recode seg2→code1
