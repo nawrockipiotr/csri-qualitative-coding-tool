@@ -319,6 +319,9 @@ const I18N = {
     en: 'List of codes or conceptual framework description...'
   },
   setup_start: { pl: 'Rozpocznij kodowanie', en: 'Start coding' },
+  setup_reset: { pl: 'Nowa sesja (wyczyść dane)', en: 'New session (clear data)' },
+  reset_confirm: { pl: 'Wyczyścić wszystkie dane sesji? Tej operacji nie można cofnąć.', en: 'Clear all session data? This cannot be undone.' },
+  reset_done: { pl: 'Sesja wyczyszczona.', en: 'Session cleared.' },
 
   // Session
   session_found: {
@@ -428,6 +431,7 @@ const I18N = {
   // Errors
   err_no_data: { pl: 'Najpierw wklej dane.', en: 'Paste data first.' },
   err_no_coder: { pl: 'Podaj ID kodera.', en: 'Enter coder ID.' },
+  err_no_api_key: { pl: 'Wybrany tryb wymaga klucza API — podaj klucz powyżej.', en: 'Selected mode requires an API key — enter one above.' },
 
   // Parse status
   parse_transcript: { pl: 'Rozpoznano eksport Transcript Tool:', en: 'Recognized Transcript Tool export:' },

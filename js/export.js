@@ -44,7 +44,7 @@ function exportJSON() {
 
   const json = JSON.stringify(data, null, 2);
   downloadFile(json, `coding_export_${ts()}.json`, 'application/json');
-  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escHtml(json.substring(0, 2000))}${json.length > 2000 ? '\n...' : ''}</pre>`;
+  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(json.substring(0, 2000))}${json.length > 2000 ? '\n...' : ''}</pre>`;
 }
 
 function exportCSV() {
@@ -103,7 +103,7 @@ function exportGioia() {
 
   const md = lines.join('\n');
   downloadFile(md, 'gioia_table.md', 'text/markdown');
-  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escHtml(md)}</pre>`;
+  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(md)}</pre>`;
 }
 
 function exportReport() {
@@ -140,13 +140,18 @@ ${t('report_code_list')}
 ${codeLines}
 
 ${t('report_warnings')}
-${singletons > Object.keys(codes).length * 0.25 ? `  - ${t('report_singleton_warn')} ${singletons}/${Object.keys(codes).length} (>25%)\n` : ''}${coded > 50 && !Object.keys(state.themes).length ? `  - >50 ${t('report_no_themes_warn')}\n` : ''}${!singletons && coded ? `  ${t('report_no_warnings')}\n` : ''}`;
+${(() => {
+    const warns = [];
+    if (singletons > Object.keys(codes).length * 0.25) warns.push(`  - ${t('report_singleton_warn')} ${singletons}/${Object.keys(codes).length} (>25%)`);
+    if (coded > 50 && !Object.keys(state.themes).length) warns.push(`  - >50 ${t('report_no_themes_warn')}`);
+    return warns.length ? warns.join('\n') : `  ${t('report_no_warnings')}`;
+  })()}`;
 
   downloadFile(report, `coding_report_${ts()}.txt`, 'text/plain');
-  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escHtml(report)}</pre>`;
+  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(report)}</pre>`;
 }
 
 // ─── Helpers ───
 function ts() { return new Date().toISOString().replace(/[:.]/g, '').substring(0, 15); }
 function csvEsc(s) { return s && (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : (s || ''); }
-function escHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

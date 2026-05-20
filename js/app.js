@@ -64,6 +64,7 @@ const UNDO_MAX = 20;
 function pushUndo(label) {
   undoStack.push({
     label,
+    currentIdx: state.currentIdx,
     codedRecords: JSON.parse(JSON.stringify(state.codedRecords)),
     codebook: JSON.parse(JSON.stringify(state.codebook)),
     themes: JSON.parse(JSON.stringify(state.themes)),
@@ -75,6 +76,7 @@ function pushUndo(label) {
 function undo() {
   if (!undoStack.length) { showStatus(t('undo_empty')); return; }
   const snap = undoStack.pop();
+  state.currentIdx = snap.currentIdx;
   state.codedRecords = snap.codedRecords;
   state.codebook = snap.codebook;
   state.themes = snap.themes;
@@ -438,7 +440,13 @@ function parseCSVContent(text, filename) {
   const lines = text.replace(/^﻿/, '').split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
 
-  const header = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
+  // Auto-detect delimiter: count commas vs semicolons in header
+  const headerLine = lines[0];
+  const commaCount = (headerLine.match(/,/g) || []).length;
+  const semiCount = (headerLine.match(/;/g) || []).length;
+  const delimiter = semiCount > commaCount ? ';' : ',';
+
+  const header = parseCSVRow(lines[0], delimiter).map(h => h.toLowerCase().trim());
   const textCol = header.findIndex(h => ['text', 'text_primary', 'content', 'tekst', 'treść'].includes(h));
   const idCol = header.findIndex(h => ['segment_id', 'id', 'nr'].includes(h));
   const authorCol = header.findIndex(h => ['author', 'speaker', 'autor', 'rozmówca'].includes(h));
@@ -447,7 +455,7 @@ function parseCSVContent(text, filename) {
 
   const prefix = filePrefix(filename);
   return lines.slice(1).map((line, i) => {
-    const cols = parseCSVRow(line);
+    const cols = parseCSVRow(line, delimiter);
     return {
       segment_id: idCol >= 0 && cols[idCol] ? cols[idCol] : `${prefix}${String(i + 1).padStart(4, '0')}`,
       text_primary: cols[textCol] || '',
@@ -457,7 +465,7 @@ function parseCSVContent(text, filename) {
   }).filter(s => s.text_primary.trim());
 }
 
-function parseCSVRow(line) {
+function parseCSVRow(line, delimiter = ',') {
   const result = [];
   let current = '', inQuotes = false;
   for (let i = 0; i < line.length; i++) {
@@ -468,7 +476,7 @@ function parseCSVRow(line) {
       else current += ch;
     } else {
       if (ch === '"') inQuotes = true;
-      else if (ch === ',') { result.push(current); current = ''; }
+      else if (ch === delimiter) { result.push(current); current = ''; }
       else current += ch;
     }
   }
@@ -577,8 +585,18 @@ function confirmSetup() {
   const coderId = document.getElementById('coderId').value.trim();
   if (!coderId) { showError(t('err_no_coder')); return; }
 
+  const mode = document.querySelector('input[name="codingMode"]:checked')?.value || 'inductive';
+  const aiModes = ['counter_proposal', 'assisted', 'auto'];
+  if (aiModes.includes(mode)) {
+    const key = document.getElementById('apiKey')?.value?.trim();
+    if (!key && currentProvider !== 'local') {
+      showError(t('err_no_api_key'));
+      return;
+    }
+  }
+
   state.coderId = coderId;
-  state.codingMode = document.querySelector('input[name="codingMode"]:checked')?.value || 'inductive';
+  state.codingMode = mode;
   state.guidedMode = document.getElementById('guidedMode').checked;
   state.codingLang = document.getElementById('codingLang').value;
   state.thresholdN = parseInt(document.getElementById('thresholdN').value) || 20;
@@ -978,13 +996,18 @@ function renderAutoView(panel) {
   };
 
   if (coded === 0 && !autoRunning) {
-    // Not started yet — auto-start
+    // Not started yet — show start button
     content = `
       <div class="auto-start-panel">
         ${costEstimate(total)}
+        <button class="action-btn" onclick="runAutoCoding()">${t('auto_start')} (${total} ${t('parse_segments')})</button>
+      </div>`;
+  } else if (autoRunning) {
+    // Currently running — show spinner
+    content = `
+      <div class="auto-start-panel">
         <div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('auto_progress')}</div>
       </div>`;
-    setTimeout(() => runAutoCoding(), 100);
   } else if (uncoded.length > 0) {
     // Partially done — offer to continue
     content = `
@@ -1007,7 +1030,6 @@ function renderAutoView(panel) {
     </div>
     <div id="autoStatus"></div>
     ${content}
-    <div id="autoReviewArea"></div>
   `;
   lucide.createIcons();
 }
@@ -1021,7 +1043,7 @@ async function runAutoCoding() {
   const uncoded = state.segments.filter(s => !state.codedRecords.some(r => r.segment_id === s.segment_id));
   if (!uncoded.length) { autoRunning = false; renderCodingView(); return; }
 
-  const statusEl = document.getElementById('autoStatus');
+  let statusEl = document.getElementById('autoStatus');
   const panel = document.getElementById('view-coding');
 
   // Show progress UI with cancel button
@@ -1100,7 +1122,7 @@ async function runAutoCoding() {
   // Saturation check before theme generation
   const satWarning = checkSaturation();
   if (satWarning) {
-    const statusEl = document.getElementById('autoStatus');
+    statusEl = document.getElementById('autoStatus');
     if (statusEl) statusEl.innerHTML += `<div class="guided-box guided-warn" style="margin:0.5rem 0">
       <div class="guided-title"><i data-lucide="alert-triangle" class="icon-sm"></i> ${t('sat_warning_title')}</div>
       <p>${satWarning}</p>
@@ -1889,6 +1911,15 @@ function applyMerge(idx) {
   const merge = state._pendingMerges?.[idx];
   if (!merge) return;
 
+  // Validate: check if any source codes still exist in codebook or records
+  const liveSources = merge.sources.filter(c => state.codebook[c] || state.codedRecords.some(r => r.first_order_code === c));
+  if (!liveSources.length) {
+    // All source codes already merged/removed — mark as done
+    const card = document.getElementById('mergeCard_' + idx);
+    if (card) { card.classList.add('merge-applied'); card.querySelector('.consolidation-actions').innerHTML = `<span class="merge-done-badge">✓ ${t('consolidation_applied')}</span>`; }
+    return;
+  }
+
   pushUndo('merge');
   const targetCode = merge.target;
   const sourceType = merge.sources.map(c => state.codebook[c]?.type).find(t2 => t2) || 'descriptive';
@@ -2260,7 +2291,7 @@ function loadSession() {
 }
 
 // ─── Helpers ───
-function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+// escapeHtml() defined in export.js (loaded before app.js)
 
 // ─── Status / Error ───
 function showStatus(msg) {
@@ -2311,4 +2342,12 @@ function dismissSession() {
   document.getElementById('sessionBar').style.display = 'none';
   state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {} };
   localStorage.removeItem('coding_tool_session');
+}
+
+function resetSession() {
+  if (!confirm(t('reset_confirm'))) return;
+  dismissSession();
+  undoStack.length = 0;
+  showView('setup');
+  showStatus(t('reset_done'));
 }
