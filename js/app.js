@@ -2234,7 +2234,17 @@ function renderExportView() {
 
 // ─── Session persistence ───
 function saveSession() {
-  try { localStorage.setItem('coding_tool_session', JSON.stringify(state)); } catch (e) { /* quota */ }
+  try {
+    const json = JSON.stringify(state);
+    localStorage.setItem('coding_tool_session', json);
+    // Warn if approaching localStorage limit (~5MB)
+    if (json.length > 4 * 1024 * 1024) {
+      console.warn('Session data exceeds 4MB — consider exporting a backup (JSON).');
+    }
+  } catch (e) {
+    showError(t('save_quota_error'));
+    console.error('localStorage quota exceeded:', e);
+  }
 }
 
 function loadSession() {

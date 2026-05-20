@@ -453,6 +453,7 @@ const I18N = {
   report_singleton_warn: { pl: 'Kody jednorazowe:', en: 'Singleton codes:' },
   report_no_themes_warn: { pl: 'fragmentów bez tematów 2nd-order', en: 'segments without 2nd-order themes' },
   report_no_warnings: { pl: 'Brak ostrzeżeń.', en: 'No warnings.' },
+  save_quota_error: { pl: 'Błąd zapisu — pamięć przeglądarki pełna. Wyeksportuj dane (JSON) natychmiast, aby nie stracić pracy.', en: 'Save error — browser storage full. Export data (JSON) immediately to avoid losing work.' },
 
   // Model hints
   hint_anthropic: {
