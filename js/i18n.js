@@ -481,6 +481,7 @@ const I18N = {
   // Consolidation (actionable)
   consolidation_apply: { pl: 'Zastosuj', en: 'Apply' },
   consolidation_dismiss: { pl: 'Odrzuć', en: 'Dismiss' },
+  consolidation_applied: { pl: 'Zastosowano', en: 'Applied' },
   consolidation_none: { pl: 'Brak sugestii konsolidacji — kody są wystarczająco zróżnicowane.', en: 'No consolidation suggestions — codes are sufficiently distinct.' },
 
   // Drift (actionable)

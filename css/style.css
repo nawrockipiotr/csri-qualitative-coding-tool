@@ -1097,6 +1097,16 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   display: flex;
   gap: 0.4rem;
 }
+.merge-applied {
+  opacity: 0.6;
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+.merge-done-badge {
+  color: var(--green);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
 
 /* ═══ Drift details ═══ */
 .drift-card {

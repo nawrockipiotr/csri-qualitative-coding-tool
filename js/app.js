@@ -692,7 +692,7 @@ function renderCodingView() {
 
 function renderInductiveUI(seg) {
   const codes = Object.keys(state.codebook).sort();
-  const datalist = codes.map(c => `<option value="${c}">`).join('');
+  const datalist = codes.map(c => `<option value="${escapeHtml(c)}">`).join('');
   return `
     <div class="coding-input-area">
       <label>${t('coding_assign')}</label>
@@ -711,7 +711,7 @@ function renderInductiveUI(seg) {
 
 function renderCounterUI(seg) {
   const codes = Object.keys(state.codebook).sort();
-  const datalist = codes.map(c => `<option value="${c}">`).join('');
+  const datalist = codes.map(c => `<option value="${escapeHtml(c)}">`).join('');
   return `
     <div class="coding-input-area">
       <label>${t('coding_assign_counter')}</label>
@@ -1467,8 +1467,9 @@ function editAutoCode(segId, evt) {
     <option value="in_vivo" ${oldType === 'in_vivo' ? 'selected' : ''}>in_vivo</option>
     <option value="process" ${oldType === 'process' ? 'selected' : ''}>process</option>
   </select>`;
+  const safeSegId = segId.replace(/'/g, "\\'");
   btnCell.innerHTML = `
-    <button class="action-btn small" onclick="saveAutoEdit('${segId}')">${t('auto_save_edit')}</button>
+    <button class="action-btn small" onclick="saveAutoEdit('${safeSegId}')">${t('auto_save_edit')}</button>
     <button class="action-btn small secondary" onclick="renderCodingView()">${t('auto_cancel_edit')}</button>`;
 }
 
@@ -1480,6 +1481,7 @@ function saveAutoEdit(segId) {
   const record = state.codedRecords.find(r => r.segment_id === segId);
   if (!record) return;
 
+  pushUndo('saveAutoEdit');
   const oldCode = record.first_order_code;
   record.first_order_code = newCode;
   record.code_type = newType;
@@ -1639,6 +1641,7 @@ function renderCodebookView() {
       <div id="aiDimsResult"></div>
     </div>
   `;
+  lucide.createIcons();
 }
 
 function updateDefinition(code, def) {
@@ -1853,9 +1856,30 @@ function applyMerge(idx) {
   recalcAllFrequencies();
   saveSession();
 
-  // Remove card and re-render
-  document.getElementById('mergeCard_' + idx)?.remove();
+  // Mark card as applied (visual feedback) before re-render destroys it
+  const card = document.getElementById('mergeCard_' + idx);
+  if (card) {
+    card.classList.add('merge-applied');
+    card.querySelector('.consolidation-actions').innerHTML = `<span class="merge-done-badge">✓ ${t('consolidation_applied')}</span>`;
+  }
+
+  // Preserve remaining consolidation HTML, re-render codebook, then restore
+  const consEl = document.getElementById('consolidationResult');
+  const savedHtml = consEl ? consEl.innerHTML : '';
   renderCodebookView();
+  const newConsEl = document.getElementById('consolidationResult');
+  if (newConsEl && savedHtml) {
+    newConsEl.innerHTML = savedHtml;
+    // Re-bind remaining apply/dismiss buttons
+    newConsEl.querySelectorAll('[data-merge-idx]').forEach(btn => {
+      btn.addEventListener('click', () => applyMerge(parseInt(btn.dataset.mergeIdx)));
+    });
+    newConsEl.querySelectorAll('[data-dismiss-idx]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('mergeCard_' + btn.dataset.dismissIdx)?.remove();
+      });
+    });
+  }
 }
 
 // ─── AI generation (standalone — available in all modes, uses multi-pass) ───
@@ -2081,7 +2105,7 @@ function renderVisualizationView() {
     <h3>${t('viz_diagnostics')}</h3>
     <div class="diag-grid">
       <div class="diag-item diag-${singletonStatus}">${t('viz_singletons')} ${singletons}/${totalCodes} (${singletonPct}%)${singletonStatus !== 'ok' ? singletonLink : ''}</div>
-      <div class="diag-item diag-${overloadStatus}">${t('viz_overloaded')} ${overloaded.length}${overloaded.length ? ' — ' + overloaded.map(([c]) => c).join(', ') + overloadLink : ''}</div>
+      <div class="diag-item diag-${overloadStatus}">${t('viz_overloaded')} ${overloaded.length}${overloaded.length ? ' — ' + overloaded.map(([c]) => escapeHtml(c)).join(', ') + overloadLink : ''}</div>
       ${satHtml}
     </div>
     ${abductionHtml}
@@ -2092,9 +2116,10 @@ function renderVisualizationView() {
     <h3>${t('viz_freq')}</h3>
     <div class="code-bars">${Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c, i]) => {
       const w = Math.round(i.frequency / totalCoded * 100);
-      return `<div class="bar-row"><span class="bar-label">${c}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(w, 2)}%"></div></div><span class="bar-count">${i.frequency}</span></div>`;
+      return `<div class="bar-row"><span class="bar-label">${escapeHtml(c)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(w, 2)}%"></div></div><span class="bar-count">${i.frequency}</span></div>`;
     }).join('')}</div>
   `;
+  lucide.createIcons();
 }
 
 // ─── Export view ───
