@@ -57,8 +57,11 @@ TYPE: descriptive | in_vivo | process
 JUSTIFICATION: [1-2 sentences]`;
 }
 
-function getConsolidationSuggestionsPrompt() {
+function getConsolidationSuggestionsPrompt(codingLang) {
   return `You are a qualitative coding expert. Review the code list and suggest which codes may describe the same phenomenon using different words.
+
+RULES:
+- ${langRule(codingLang)}
 
 RESPONSE FORMAT (strict):
 For each suggestion:

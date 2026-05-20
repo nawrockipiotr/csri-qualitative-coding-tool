@@ -799,9 +799,9 @@ async function getCounterProposal() {
 
     resultEl.innerHTML = `
       <div class="counter-comparison">
-        <div class="counter-col"><div class="counter-label">${t('coding_your_code')}</div><div class="counter-code">${code}</div></div>
-        <div class="counter-col"><div class="counter-label">${t('coding_ai_proposal')}</div><div class="counter-code">${proposedCode || response}</div>
-          ${justification ? `<div class="counter-reason">${justification}</div>` : ''}</div>
+        <div class="counter-col"><div class="counter-label">${t('coding_your_code')}</div><div class="counter-code">${escapeHtml(code)}</div></div>
+        <div class="counter-col"><div class="counter-label">${t('coding_ai_proposal')}</div><div class="counter-code">${escapeHtml(proposedCode || response)}</div>
+          ${justification ? `<div class="counter-reason">${escapeHtml(justification)}</div>` : ''}</div>
       </div>
       <div class="decision-row">
         <label><input type="radio" name="decision" value="researcher" checked> ${t('coding_decision_mine')}</label>
@@ -895,8 +895,8 @@ async function getAssistedProposal() {
     resultEl.innerHTML = `
       <div class="assisted-proposal">
         <div class="counter-label">${t('coding_ai_proposal')}</div>
-        <div class="counter-code">${proposedCode || response}</div>
-        ${justification ? `<div class="counter-reason">${justification}</div>` : ''}
+        <div class="counter-code">${escapeHtml(proposedCode || response)}</div>
+        ${justification ? `<div class="counter-reason">${escapeHtml(justification)}</div>` : ''}
       </div>
       <div class="decision-row">
         <label><input type="radio" name="aDecision" value="tool" checked> ${t('coding_decision_accept')}</label>
@@ -1428,7 +1428,7 @@ function renderAutoReview() {
       <td><code>${escapeHtml(r.first_order_code)}</code></td>
       <td>${r.code_type}</td>
       <td class="auto-notes">${escapeHtml(r.notes || '')}</td>
-      <td><button class="action-btn small" onclick="editAutoCode('${r.segment_id}', event)">${t('auto_edit')}</button></td>
+      <td><button class="action-btn small" onclick="editAutoCode('${r.segment_id.replace(/'/g, "\\'")}', event)">${t('auto_edit')}</button></td>
     </tr>`;
   }).join('');
 
@@ -1542,7 +1542,7 @@ function renderRecentCodes() {
   const recent = state.codedRecords.slice(-5).reverse();
   if (!recent.length) return;
   el.innerHTML = `<div class="recent-title">${t('coding_recent')}</div>` +
-    recent.map(r => `<span class="recent-item">${r.segment_id}: <code>${r.first_order_code}</code></span>`).join('');
+    recent.map(r => `<span class="recent-item">${escapeHtml(r.segment_id)}: <code>${escapeHtml(r.first_order_code)}</code></span>`).join('');
 }
 
 // ─── Codebook view ───
@@ -1675,12 +1675,14 @@ function updateGrounding(dim, text) {
 function createTheme() {
   const name = document.getElementById('newThemeName')?.value.trim();
   if (!name || state.themes[name]) return;
+  pushUndo('createTheme');
   state.themes[name] = [];
   saveSession();
   renderCodebookView();
 }
 
 function removeTheme(name) {
+  pushUndo('removeTheme');
   delete state.themes[name];
   // Also remove from dimensions
   for (const [dim, themes] of Object.entries(state.dimensions)) {
@@ -1693,6 +1695,7 @@ function removeTheme(name) {
 
 function addCodeToTheme(theme, code) {
   if (!code || !state.themes[theme]) return;
+  pushUndo('addCodeToTheme');
   // Remove from other themes first
   for (const [t2, codes] of Object.entries(state.themes)) {
     state.themes[t2] = codes.filter(c => c !== code);
@@ -1704,6 +1707,7 @@ function addCodeToTheme(theme, code) {
 
 function removeCodeFromTheme(theme, code) {
   if (!state.themes[theme]) return;
+  pushUndo('removeCodeFromTheme');
   state.themes[theme] = state.themes[theme].filter(c => c !== code);
   saveSession();
   renderCodebookView();
@@ -1712,12 +1716,14 @@ function removeCodeFromTheme(theme, code) {
 function createDimension() {
   const name = document.getElementById('newDimName')?.value.trim();
   if (!name || state.dimensions[name]) return;
+  pushUndo('createDimension');
   state.dimensions[name] = [];
   saveSession();
   renderCodebookView();
 }
 
 function removeDimension(name) {
+  pushUndo('removeDimension');
   delete state.dimensions[name];
   saveSession();
   renderCodebookView();
@@ -1725,6 +1731,7 @@ function removeDimension(name) {
 
 function addThemeToDimension(dim, theme) {
   if (!theme || !state.dimensions[dim]) return;
+  pushUndo('addThemeToDimension');
   for (const [d2, themes] of Object.entries(state.dimensions)) {
     state.dimensions[d2] = themes.filter(t2 => t2 !== theme);
   }
@@ -1735,6 +1742,7 @@ function addThemeToDimension(dim, theme) {
 
 function removeThemeFromDimension(dim, theme) {
   if (!state.dimensions[dim]) return;
+  pushUndo('removeThemeFromDimension');
   state.dimensions[dim] = state.dimensions[dim].filter(t2 => t2 !== theme);
   saveSession();
   renderCodebookView();
@@ -1753,7 +1761,7 @@ async function suggestConsolidation() {
 
   try {
     abortController = new AbortController();
-    const response = await callAIWithRetry(apiKey, getConsolidationSuggestionsPrompt(), `Lista kodów:\n${codeList}`);
+    const response = await callAIWithRetry(apiKey, getConsolidationSuggestionsPrompt(state.codingLang), `Lista kodów:\n${codeList}`);
 
     // Parse MERGE suggestions
     const suggestions = [];
@@ -1978,17 +1986,17 @@ function renderVisualizationView() {
         for (const theme of dimThemes) {
           if (state.themes[theme]) {
             const codesStr = state.themes[theme].map(c =>
-              codes[c]?.type === 'in_vivo' ? `<em>${c}</em>` : c
+              codes[c]?.type === 'in_vivo' ? `<em>${escapeHtml(c)}</em>` : escapeHtml(c)
             ).join(', ');
-            rows += `<tr><td>${codesStr}</td><td>${theme}</td><td>${first ? dim : ''}</td></tr>`;
+            rows += `<tr><td>${codesStr}</td><td>${escapeHtml(theme)}</td><td>${first ? escapeHtml(dim) : ''}</td></tr>`;
             first = false;
           }
         }
       }
     } else {
       for (const [theme, tCodes] of Object.entries(state.themes)) {
-        const codesStr = tCodes.map(c => codes[c]?.type === 'in_vivo' ? `<em>${c}</em>` : c).join(', ');
-        rows += `<tr><td>${codesStr}</td><td>${theme}</td><td></td></tr>`;
+        const codesStr = tCodes.map(c => codes[c]?.type === 'in_vivo' ? `<em>${escapeHtml(c)}</em>` : escapeHtml(c)).join(', ');
+        rows += `<tr><td>${codesStr}</td><td>${escapeHtml(theme)}</td><td></td></tr>`;
       }
     }
     const noDims = !Object.keys(state.dimensions).length && Object.keys(state.themes).length >= 2;

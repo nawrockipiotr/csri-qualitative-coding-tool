@@ -53,7 +53,7 @@
 
     <!-- Info panels -->
     <div class="info-panel" id="infoInductive">
-      <div class="info-box"><div class="info-content" data-i18n="info_inductive_text">Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_inductive_text">Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Nawigacja: ← → (skróty klawiszowe), cofanie: Ctrl+Z. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.</div></div>
     </div>
     <div class="info-panel" id="infoCounter">
       <div class="info-box"><div class="info-content" data-i18n="info_counter_text">Badacz najpierw nadaje własny kod, potem AI proponuje alternatywę. Decyzja zawsze po stronie badacza: mój kod, propozycja AI, lub zmodyfikowany. Wymusza refleksję nad własnymi wyborami.</div></div>
@@ -62,16 +62,16 @@
       <div class="info-box"><div class="info-content" data-i18n="info_assisted_text">AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.</div></div>
     </div>
     <div class="info-panel" id="infoGioia">
-      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (15–25) → second-order themes (4–8) → aggregate dimensions (2–4). Każdy temat grupuje 2–6 kodów. Wymiary wymagają uzasadnienia teoretycznego.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.</div></div>
     </div>
     <div class="info-panel" id="infoAuto">
-      <div class="info-box"><div class="info-content" data-i18n="info_auto_text">Pipeline w 5 fazach: kodowanie z kontekstem → drift check co 10 segmentów → wieloprzebiegowe tematy → pętla abdukcyjna → wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega gdy kody pojawiają się zbyt szybko.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_auto_text">Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co N segmentów — batch size konfigurowalny w parametrach (domyślnie 10), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja, temperature=0 dla powtarzalności), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Przed startem wyświetlana jest analiza wstępna danych z sugestiami konfiguracji. Badacz koryguje wyniki w tabeli przeglądu — cofanie zmian przez Ctrl+Z.</div></div>
     </div>
     <div class="info-panel" id="infoImport">
-      <div class="info-box"><div class="info-content" data-i18n="info_import_text">Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Wiele plików = wspólna pula segmentów z oznaczeniem źródła. Przy imporcie do istniejącej sesji: dodaj do puli lub zastąp.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_import_text">Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Wiele plików tworzy wspólną pulę segmentów — każdy segment zachowuje oznaczenie pliku źródłowego. TXT: auto-detekcja tur mówców (Imię: tekst) lub podział na akapity. JSON: natywny format QCT lub dowolna tablica obiektów. CSV: automatyczne rozpoznanie kolumn (text/author/id). DOCX: ekstrakcja tekstu, segmentacja jak TXT. Przy imporcie do istniejącej sesji wybierasz: dodaj do puli (merge) lub zastąp.</div></div>
     </div>
     <div class="info-panel" id="infoExport">
-      <div class="info-box"><div class="info-content" data-i18n="info_export_text">JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). JSON jest kanonicznym formatem wymiany z pluginem Claude.</div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_export_text">JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.</div></div>
     </div>
 
     <div class="hero-author">Qualitative Coding Tool · by Piotr Nawrocki</div>
