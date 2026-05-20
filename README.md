@@ -17,15 +17,15 @@ Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Cz
 
 **Dostawcy AI:** Anthropic (Claude Haiku/Sonnet), OpenAI (GPT-4o mini/4o), Google (Gemini Flash/Pro), lokalny model (Ollama, LM Studio — API kompatybilne z OpenAI).
 
-**Import danych:** drag & drop wielu plików (TXT, JSON, CSV, DOCX), wklejanie tekstu, auto-detekcja tur mówców, merge/replace przy doimporcie.
+**Import danych:** drag & drop wielu plików (TXT, JSON, CSV, DOCX), wklejanie tekstu, auto-detekcja tur mówców, merge/replace przy doimporcie. Typy źródła: wywiad, fokus, obserwacja, dokument, ankieta (otwarte), social media, audio/wideo.
 
 **Eksport:** JSON (pełny z metadanymi), CSV (MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania, eksport codebooka (CSV). Szybki eksport CSV/JSON dostępny z widoku kodowania.
 
 **Analiza wstępna:** briefing przed kodowaniem — statystyki segmentów, sugestie trybu i batch size, ostrzeżenia o zbyt krótkich/długich segmentach.
 
-**Jakość kodowania:** brama saturacji, batch drift check (constant comparison), konsolidacja kodów (sugestie AI), filtrowanie i eksport codebooka.
+**Jakość kodowania:** brama saturacji, batch drift check (constant comparison) z akcjami recode/dismiss, konsolidacja kodów (sugestie AI z przyciskami Apply/Dismiss), filtrowanie false-positive drift, filtrowanie i eksport codebooka.
 
-**UX:** undo (Ctrl+Z, stos 20 akcji), skróty klawiszowe (← → nawigacja), potwierdzenie przed nadpisaniem tematów/wymiarów, szacunek kosztów API, dark mode, i18n PL/EN, sesja zapisywana w localStorage.
+**UX:** undo (Ctrl+Z, stos 20 akcji), skróty klawiszowe (← → nawigacja), potwierdzenie przed nadpisaniem tematów/wymiarów (z hintem o porównywaniu wariantów), szacunek kosztów API, dark mode, i18n PL/EN, sesja zapisywana w localStorage z ostrzeżeniem przy przekroczeniu 4 MB, kontekstowe wskazówki przy polach konfiguracji, infoboxy (Gioia, tryby, import, eksport, zapis sesji).
 
 ## Architektura
 

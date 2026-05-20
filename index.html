@@ -42,16 +42,20 @@
 
     <!-- Collapsible feature info buttons -->
     <div class="info-toggles">
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoGioia')" data-i18n="info_gioia">Metodologia Gioia</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoInductive')" data-i18n="info_inductive">Tryb indukcyjny</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoCounter')" data-i18n="info_counter">Kontrpropozycja</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoAssisted')" data-i18n="info_assisted">Tryb asystowany</button>
-      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoGioia')" data-i18n="info_gioia">Metodologia Gioia</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoAuto')" data-i18n="info_auto">Tryb automatyczny</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoImport')" data-i18n="info_import">Import danych</button>
       <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoExport')" data-i18n="info_export">Eksport</button>
+      <button class="info-toggle-btn" aria-expanded="false" onclick="toggleInfo('infoSession')" data-i18n="info_session">Zapis sesji</button>
     </div>
 
     <!-- Info panels -->
+    <div class="info-panel" id="infoGioia">
+      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.</div></div>
+    </div>
     <div class="info-panel" id="infoInductive">
       <div class="info-box"><div class="info-content" data-i18n="info_inductive_text">Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Nawigacja: ← → (skróty klawiszowe), cofanie: Ctrl+Z. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.</div></div>
     </div>
@@ -61,9 +65,6 @@
     <div class="info-panel" id="infoAssisted">
       <div class="info-box"><div class="info-content" data-i18n="info_assisted_text">AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.</div></div>
     </div>
-    <div class="info-panel" id="infoGioia">
-      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.</div></div>
-    </div>
     <div class="info-panel" id="infoAuto">
       <div class="info-box"><div class="info-content" data-i18n="info_auto_text">Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co N segmentów — batch size konfigurowalny w parametrach (domyślnie 10), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja, temperature=0 dla powtarzalności), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Przed startem wyświetlana jest analiza wstępna danych z sugestiami konfiguracji. Badacz koryguje wyniki w tabeli przeglądu — cofanie zmian przez Ctrl+Z.</div></div>
     </div>
@@ -72,6 +73,9 @@
     </div>
     <div class="info-panel" id="infoExport">
       <div class="info-box"><div class="info-content" data-i18n="info_export_text">JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.</div></div>
+    </div>
+    <div class="info-panel" id="infoSession">
+      <div class="info-box"><div class="info-content" data-i18n="info_session_text">Cała sesja kodowania jest automatycznie zapisywana w localStorage przeglądarki po każdej operacji (nadanie kodu, edycja, konsolidacja, generowanie tematów). Jeśli zamkniesz przeglądarkę lub kartę — po ponownym otwarciu narzędzie wczyta ostatni stan. Limit localStorage to ok. 5 MB; przy dużych zbiorach narzędzie ostrzeże, gdy dane przekroczą 4 MB. Zalecenie: regularnie eksportuj sesję do JSON jako kopię zapasową — localStorage może zostać wyczyszczone przez przeglądarkę.</div></div>
     </div>
 
     <div class="hero-author">Qualitative Coding Tool · by Piotr Nawrocki</div>

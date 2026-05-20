@@ -70,6 +70,11 @@ const I18N = {
     pl: 'JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.',
     en: 'JSON (full export with metadata), CSV (compatible with MAXQDA/NVivo), Gioia table (Markdown), coding report (stats and warnings). Codebook export (CSV) available in the Codebook tab. Quick coding export (CSV/JSON) available directly from the coding view. JSON is the canonical exchange format with the Claude plugin.'
   },
+  info_session: { pl: 'Zapis sesji', en: 'Session persistence' },
+  info_session_text: {
+    pl: 'Cała sesja kodowania jest automatycznie zapisywana w localStorage przeglądarki po każdej operacji (nadanie kodu, edycja, konsolidacja, generowanie tematów). Jeśli zamkniesz przeglądarkę lub kartę — po ponownym otwarciu narzędzie wczyta ostatni stan. Limit localStorage to ok. 5 MB; przy dużych zbiorach narzędzie ostrzeże, gdy dane przekroczą 4 MB. Zalecenie: regularnie eksportuj sesję do JSON jako kopię zapasową — localStorage może zostać wyczyszczone przez przeglądarkę.',
+    en: 'The entire coding session is automatically saved to localStorage after every operation (coding, editing, consolidation, theme generation). If you close the browser or tab, the tool will restore the last state on reopen. The localStorage limit is ~5 MB; the tool warns when data exceeds 4 MB. Recommendation: regularly export the session to JSON as a backup — localStorage may be cleared by the browser.'
+  },
 
   // API Section
   api_provider: { pl: 'Dostawca AI', en: 'AI Provider' },
