@@ -68,7 +68,7 @@ For each suggestion:
 MERGE: [code_1] + [code_2] → [suggested merged code]
 REASON: [why these are the same phenomenon]
 
-Max 5 suggestions, sorted from most obvious. If no merges are warranted, say so.`;
+Max 5 suggestions, sorted from most obvious. If no merges are warranted, respond with exactly: NO_MERGE`;
 }
 
 function getAutoCodePrompt(codingLang, researchQuestion, framework, existingCodes) {

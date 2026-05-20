@@ -483,6 +483,7 @@ const I18N = {
   consolidation_dismiss: { pl: 'Odrzuć', en: 'Dismiss' },
   consolidation_applied: { pl: 'Zastosowano', en: 'Applied' },
   consolidation_none: { pl: 'Brak sugestii konsolidacji — kody są wystarczająco zróżnicowane.', en: 'No consolidation suggestions — codes are sufficiently distinct.' },
+  consolidation_min_codes: { pl: 'Za mało aktywnych kodów do konsolidacji (minimum 3 z przypisanymi segmentami).', en: 'Not enough active codes for consolidation (minimum 3 with assigned segments).' },
 
   // Drift (actionable)
   drift_issues: { pl: 'problemów', en: 'issues' },

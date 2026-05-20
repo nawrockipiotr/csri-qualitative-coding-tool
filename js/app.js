@@ -1790,9 +1790,17 @@ async function suggestConsolidation() {
   if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
 
   const el = document.getElementById('consolidationResult');
+
+  // Filter codes with frequency > 0
+  const activeCodes = Object.entries(state.codebook).filter(([, v]) => v.frequency > 0);
+  if (activeCodes.length < 3) {
+    el.innerHTML = `<div class="ai-result"><p>${t('consolidation_min_codes')}</p></div>`;
+    return;
+  }
+
   el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('codebook_analyzing')}</div>`;
 
-  const codeList = Object.entries(state.codebook)
+  const codeList = activeCodes
     .sort((a, b) => b[1].frequency - a[1].frequency)
     .map(([c, i]) => `- ${c} (${i.frequency}×)`).join('\n');
 
