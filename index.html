@@ -220,6 +220,7 @@
         <div>
           <label data-i18n="setup_coder_id">ID kodera</label>
           <input type="text" id="coderId" placeholder="np. PN01">
+          <p class="parse-hint" data-i18n="hint_coder_id">Identyfikator osoby kodującej — potrzebny przy kodowaniu wieloosobowym (inter-rater reliability).</p>
         </div>
         <div>
           <label data-i18n="setup_code_lang">Język kodów</label>
@@ -227,16 +228,19 @@
             <option value="pl">Polski</option>
             <option value="en">English</option>
           </select>
+          <p class="parse-hint" data-i18n="hint_code_lang">Język, w którym AI tworzy nazwy kodów i tematów.</p>
         </div>
       </div>
       <div class="params-row">
         <div>
           <label data-i18n="setup_threshold">Próg konsolidacji (N)</label>
           <input type="number" id="thresholdN" value="20" min="5" max="100">
+          <p class="parse-hint" data-i18n="hint_threshold">Po zakodowaniu N segmentów pojawi się sugestia przeglądu i konsolidacji kodów.</p>
         </div>
         <div>
           <label data-i18n="setup_batch_size">Batch drift check (co ile segmentów)</label>
           <input type="number" id="batchSize" value="10" min="5" max="50">
+          <p class="parse-hint" data-i18n="hint_batch_size">AI sprawdza spójność kodowania co tyle segmentów — wykrywa dryf (zmianę znaczenia kodu w czasie).</p>
         </div>
       </div>
       <div class="params-row">
@@ -244,6 +248,7 @@
           <label class="save-check">
             <input type="checkbox" id="guidedMode"> <span data-i18n="setup_guided">Guided mode</span>
           </label>
+          <p class="parse-hint" data-i18n="hint_guided">Tryb nadzorowany — dodatkowe pytania refleksyjne i wskazówki metodologiczne podczas kodowania.</p>
         </div>
         <div></div>
       </div>
@@ -252,11 +257,13 @@
     <div class="setup-section">
       <label data-i18n="setup_rq">Pytanie badawcze (opcjonalnie)</label>
       <input type="text" id="researchQuestion" data-i18n="setup_rq_placeholder" placeholder="np. Jak pracownicy doświadczają zmiany organizacyjnej?">
+      <p class="parse-hint" data-i18n="hint_rq">Jeśli podasz pytanie badawcze, AI będzie je uwzględniać przy generowaniu kodów, tematów i wymiarów.</p>
     </div>
 
     <div class="setup-section">
       <label data-i18n="setup_framework">Framework / kody a priori (opcjonalnie, tryb asystowany)</label>
       <textarea id="framework" data-i18n="setup_framework_placeholder" placeholder="Lista kodów lub opis ramy pojęciowej..." style="min-height:60px"></textarea>
+      <p class="parse-hint" data-i18n="hint_framework">Lista istniejących kodów lub opis ramy teoretycznej — AI będzie próbować dopasować segmenty do tych kategorii zanim utworzy nowe.</p>
     </div>
 
     <button class="action-btn" onclick="confirmSetup()" style="width:100%" data-i18n="setup_start">Rozpocznij kodowanie</button>
