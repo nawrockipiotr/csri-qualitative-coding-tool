@@ -1150,6 +1150,30 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   margin-top: 0.3rem;
   line-height: 1.5;
 }
+.drift-type {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  margin: 0.4rem 0 0.2rem;
+}
+.drift-type-fatigue { background: var(--red-dim); color: var(--red); }
+.drift-type-evolution { background: var(--accent-teal-dim); color: var(--accent-teal); }
+.drift-type-genuine_difference { background: var(--green-dim); color: var(--green); }
+.drift-suggestion {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin: 0.3rem 0;
+  font-style: italic;
+}
+.drift-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
 
 /* ═══ Grounding cards ═══ */
 .grounding-card {

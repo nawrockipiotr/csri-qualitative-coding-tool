@@ -1149,9 +1149,19 @@ async function runBatchDriftCheck(apiKey, batchEndIdx) {
     // Parse drift results and store as warnings
     if (!response.toUpperCase().includes('CONSISTENT:')) {
       const drifts = [];
-      for (const line of response.split('\n')) {
-        if (line.toUpperCase().startsWith('DRIFT:')) drifts.push(line);
+      const lines = response.split('\n');
+      let currentDrift = null;
+      for (const line of lines) {
+        if (line.toUpperCase().startsWith('DRIFT:')) {
+          if (currentDrift) drifts.push(currentDrift);
+          currentDrift = { line: line, type: '', suggestion: '' };
+        } else if (line.toUpperCase().startsWith('TYPE:') && currentDrift) {
+          currentDrift.type = line.split(':').slice(1).join(':').trim();
+        } else if (line.toUpperCase().startsWith('SUGGESTION:') && currentDrift) {
+          currentDrift.suggestion = line.split(':').slice(1).join(':').trim();
+        }
       }
+      if (currentDrift) drifts.push(currentDrift);
       if (drifts.length) {
         if (!state._driftWarnings) state._driftWarnings = [];
         state._driftWarnings.push({ batch: batchEndIdx, drifts, full: response });
@@ -1663,6 +1673,30 @@ function exportCodebook() {
   downloadFile(csv, `codebook_${ts()}.csv`, 'text/csv;charset=utf-8');
 }
 
+// ─── Drift resolution ───
+function recodeDrift(segId, newCode, btn) {
+  const record = state.codedRecords.find(r => r.segment_id === segId);
+  if (!record) return;
+  pushUndo('recodeDrift');
+  const oldCode = record.first_order_code;
+  record.first_order_code = newCode;
+  record.notes = (record.notes || '') + ` [drift recode: ${oldCode} → ${newCode}]`;
+  recalcAllFrequencies();
+  saveSession();
+  // Mark as resolved
+  const detail = btn.closest('.drift-detail');
+  if (detail) {
+    detail.classList.add('merge-applied');
+    const actions = detail.querySelector('.drift-actions');
+    if (actions) actions.innerHTML = `<span class="merge-done-badge">✓ ${escapeHtml(segId)} → ${escapeHtml(newCode)}</span>`;
+  }
+}
+
+function dismissDrift(btn) {
+  const detail = btn.closest('.drift-detail');
+  if (detail) detail.remove();
+}
+
 function updateGrounding(dim, text) {
   if (!state._dimensionGroundings) state._dimensionGroundings = {};
   const existing = state._dimensionGroundings[dim];
@@ -2068,15 +2102,29 @@ function renderVisualizationView() {
   let driftHtml = '';
   if (state._driftWarnings && state._driftWarnings.length) {
     const driftCards = state._driftWarnings.map((w, wi) => {
-      // Parse DRIFT lines for segment pairs
       const driftDetails = w.drifts.map((d, di) => {
-        // Try to extract segment IDs from DRIFT line
-        const match = d.match(/DRIFT:\s*(\S+)\s*\(code:\s*([^)]+)\)\s*↔\s*(\S+)\s*\(code:\s*([^)]+)\)/i);
+        // Support both old format (string) and new format ({line, type, suggestion})
+        const dLine = typeof d === 'string' ? d : d.line;
+        const dType = typeof d === 'object' ? (d.type || '') : '';
+        const dSuggestion = typeof d === 'object' ? (d.suggestion || '') : '';
+        const match = dLine.match(/DRIFT:\s*(\S+)\s*\(code:\s*([^)]+)\)\s*↔\s*(\S+)\s*\(code:\s*([^)]+)\)/i);
         if (match) {
           const [, seg1, code1, seg2, code2] = match;
           const r1 = state.codedRecords.find(r => r.segment_id === seg1);
           const r2 = state.codedRecords.find(r => r.segment_id === seg2);
-          return `<div class="drift-detail">
+          const typeBadge = dType ? `<span class="drift-type drift-type-${dType.toLowerCase()}">${escapeHtml(dType)}</span>` : '';
+          const suggestionLine = dSuggestion ? `<div class="drift-suggestion">${escapeHtml(dSuggestion)}</div>` : '';
+          // Recode buttons: recode seg1→code2, recode seg2→code1
+          const s1safe = seg1.replace(/'/g, "\\'");
+          const s2safe = seg2.replace(/'/g, "\\'");
+          const c1safe = code1.replace(/'/g, "\\'");
+          const c2safe = code2.replace(/'/g, "\\'");
+          const recodeButtons = `<div class="drift-actions">
+            <button class="action-btn small" onclick="recodeDrift('${s1safe}','${c2safe}',this)" title="${t('drift_recode_to')} ${escapeHtml(code2)}">${escapeHtml(seg1)} → ${escapeHtml(code2)}</button>
+            <button class="action-btn small" onclick="recodeDrift('${s2safe}','${c1safe}',this)" title="${t('drift_recode_to')} ${escapeHtml(code1)}">${escapeHtml(seg2)} → ${escapeHtml(code1)}</button>
+            <button class="action-btn small secondary" onclick="dismissDrift(this)">${t('drift_dismiss')}</button>
+          </div>`;
+          return `<div class="drift-detail" id="drift_${wi}_${di}">
             <div class="drift-pair">
               <div class="drift-seg"><span class="seg-id">${escapeHtml(seg1)}</span> <code>${escapeHtml(code1)}</code>
                 ${r1 ? `<div class="drift-text">${escapeHtml(r1.text_primary.substring(0, 150))}${r1.text_primary.length > 150 ? '...' : ''}</div>` : ''}
@@ -2085,9 +2133,11 @@ function renderVisualizationView() {
                 ${r2 ? `<div class="drift-text">${escapeHtml(r2.text_primary.substring(0, 150))}${r2.text_primary.length > 150 ? '...' : ''}</div>` : ''}
               </div>
             </div>
+            ${typeBadge}${suggestionLine}
+            ${recodeButtons}
           </div>`;
         }
-        return `<div class="drift-detail">${escapeHtml(d)}</div>`;
+        return `<div class="drift-detail">${escapeHtml(dLine)}</div>`;
       }).join('');
       return `<details class="drift-card">
         <summary class="diag-item diag-warn"><strong>${t('viz_drift_batch')} ${w.batch}:</strong> ${w.drifts.length} ${t('drift_issues')}</summary>

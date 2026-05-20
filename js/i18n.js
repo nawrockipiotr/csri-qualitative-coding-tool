@@ -486,6 +486,8 @@ const I18N = {
 
   // Drift (actionable)
   drift_issues: { pl: 'problemów', en: 'issues' },
+  drift_recode_to: { pl: 'Przekoduj na', en: 'Recode to' },
+  drift_dismiss: { pl: 'Odrzuć', en: 'Dismiss' },
 
   // Diagnostics links
   diag_go_codebook: { pl: '→ Codebook', en: '→ Codebook' },
