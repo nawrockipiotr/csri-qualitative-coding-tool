@@ -525,12 +525,12 @@ const I18N = {
   auto_cost_tokens: { pl: 'tokenów/segment', en: 'tokens/segment' },
   // Overwrite confirmations
   gen_themes_overwrite: {
-    pl: 'Tematy już istnieją. Wygenerować nowe? (poprzednie zostaną nadpisane — możesz cofnąć Ctrl+Z)',
-    en: 'Themes already exist. Generate new ones? (previous will be overwritten — you can undo with Ctrl+Z)'
+    pl: 'Tematy już istnieją. Wygenerować nowe? (poprzednie zostaną nadpisane — możesz cofnąć Ctrl+Z). Każde wywołanie daje inny wariant tematyzacji — porównaj kilka, zanim wybierzesz.',
+    en: 'Themes already exist. Generate new ones? (previous will be overwritten — you can undo with Ctrl+Z). Each run produces a different thematization variant — compare a few before deciding.'
   },
   gen_dims_overwrite: {
-    pl: 'Wymiary już istnieją. Wygenerować nowe? (poprzednie zostaną nadpisane — możesz cofnąć Ctrl+Z)',
-    en: 'Dimensions already exist. Generate new ones? (previous will be overwritten — you can undo with Ctrl+Z)'
+    pl: 'Wymiary już istnieją. Wygenerować nowe? (poprzednie zostaną nadpisane — możesz cofnąć Ctrl+Z). Każde wywołanie daje inny wariant — porównaj kilka, zanim wybierzesz.',
+    en: 'Dimensions already exist. Generate new ones? (previous will be overwritten — you can undo with Ctrl+Z). Each run produces a different variant — compare a few before deciding.'
   },
   // Pre-analysis briefing
   briefing_title: { pl: 'Analiza wstępna danych', en: 'Data pre-analysis' },
