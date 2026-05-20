@@ -1144,7 +1144,7 @@ async function runBatchDriftCheck(apiKey, batchEndIdx) {
     abortController = new AbortController();
     const batchDesc = batch.map(r => `[${r.segment_id}] (code: ${r.first_order_code}): ${r.text_primary.substring(0, 150)}`).join('\n');
     const systemPrompt = getBatchDriftCheckPrompt(state.codingLang);
-    const response = await callAIWithRetry(apiKey, systemPrompt, batchDesc);
+    const response = await callAIWithRetry(apiKey, systemPrompt, batchDesc, 3, { temperature: 0 });
 
     // Parse drift results and store as warnings
     if (!response.toUpperCase().includes('CONSISTENT:')) {
@@ -1345,7 +1345,7 @@ async function runAbductionLoop(apiKey) {
       const origIdx = state.segments.findIndex(s => s.segment_id === r.segment_id);
       const context = buildContextWindow(state.segments, origIdx);
       const userMsg = `Segment: ${r.segment_id}\nCurrent code: ${r.first_order_code} (${r.code_type})\nText: ${r.text_primary}${context}`;
-      const response = await callAIWithRetry(apiKey, systemPrompt, userMsg);
+      const response = await callAIWithRetry(apiKey, systemPrompt, userMsg, 3, { temperature: 0 });
 
       // Parse verdict
       let verdict = 'KEEP', newCode = '', newType = '', reason = '';
@@ -1824,7 +1824,7 @@ async function suggestConsolidation() {
 
   try {
     abortController = new AbortController();
-    const response = await callAIWithRetry(apiKey, getConsolidationSuggestionsPrompt(state.codingLang), `Lista kodów:\n${codeList}`);
+    const response = await callAIWithRetry(apiKey, getConsolidationSuggestionsPrompt(state.codingLang), `Lista kodów:\n${codeList}`, 3, { temperature: 0 });
 
     // Parse MERGE suggestions
     const suggestions = [];
