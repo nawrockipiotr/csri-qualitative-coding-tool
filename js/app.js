@@ -2118,6 +2118,8 @@ function renderVisualizationView() {
         const match = dLine.match(/DRIFT:\s*(\S+)\s*\(code:\s*([^)]+)\)\s*↔\s*(\S+)\s*\(code:\s*([^)]+)\)/i);
         if (match) {
           const [, seg1, code1, seg2, code2] = match;
+          // Skip false positives — same code on both segments
+          if (code1.trim() === code2.trim()) return '';
           const r1 = state.codedRecords.find(r => r.segment_id === seg1);
           const r2 = state.codedRecords.find(r => r.segment_id === seg2);
           const typeBadge = dType ? `<span class="drift-type drift-type-${dType.toLowerCase()}">${escapeHtml(dType)}</span>` : '';
@@ -2147,8 +2149,11 @@ function renderVisualizationView() {
         }
         return `<div class="drift-detail">${escapeHtml(dLine)}</div>`;
       }).join('');
+      // Count actual (non-empty) drift details after false-positive filtering
+      const actualCount = (driftDetails.match(/<div class="drift-detail"/g) || []).length;
+      if (!actualCount) return ''; // All were false positives
       return `<details class="drift-card">
-        <summary class="diag-item diag-warn"><strong>${t('viz_drift_batch')} ${w.batch}:</strong> ${w.drifts.length} ${t('drift_issues')}</summary>
+        <summary class="diag-item diag-warn"><strong>${t('viz_drift_batch')} ${w.batch}:</strong> ${actualCount} ${t('drift_issues')}</summary>
         ${driftDetails}
       </details>`;
     }).join('');

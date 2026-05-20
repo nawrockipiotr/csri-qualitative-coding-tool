@@ -161,6 +161,7 @@
       <!-- Textarea (kept for paste) -->
       <textarea id="importText" data-i18n="setup_source_placeholder" placeholder="Wklej transkrypcję, notatki terenowe, dane z Transcript Tool (JSON)..."></textarea>
       <button class="action-btn secondary" onclick="parseImportData()" data-i18n="setup_parse">Parsuj dane</button>
+      <p class="parse-hint" data-i18n="setup_parse_hint">Parsowanie dzieli tekst na segmenty do kodowania — osobne fragmenty, które otrzymają kody pierwszego rzędu.</p>
       <div id="statusMsg" class="status-msg" style="display:none"></div>
       <div id="previewArea"></div>
     </div>
@@ -172,6 +173,9 @@
         <option value="focus_group" data-i18n="source_focus">Focus group</option>
         <option value="field_notes" data-i18n="source_field">Notatki terenowe</option>
         <option value="document" data-i18n="source_document">Dokument</option>
+        <option value="survey_open" data-i18n="source_survey">Ankieta (pytania otwarte)</option>
+        <option value="social_media" data-i18n="source_social">Media społecznościowe</option>
+        <option value="audio_video" data-i18n="source_av">Nagranie audio/wideo</option>
         <option value="other" data-i18n="source_other">Inny</option>
       </select>
     </div>
