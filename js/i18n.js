@@ -33,11 +33,68 @@ const I18N = {
     en: 'Manage your codebook, build 2nd-order themes and dimensions. Export to JSON, CSV, or Gioia table.'
   },
 
-  // Info toggles
-  info_inductive: { pl: 'Tryb indukcyjny', en: 'Inductive mode' },
-  info_counter: { pl: 'Kontrpropozycja', en: 'Counter-proposal' },
-  info_assisted: { pl: 'Tryb asystowany', en: 'Assisted mode' },
+  // Info section labels
+  info_section_method: { pl: 'Elementy analizy', en: 'Analysis elements' },
+  info_section_tech: { pl: 'Tryby i obsługa', en: 'Modes & operations' },
+
+  // ── Methodological info toggles ──
   info_gioia: { pl: 'Metodologia Gioia', en: 'Gioia methodology' },
+  info_gioia_text: {
+    pl: 'Trzypoziomowa struktura analizy jakościowej opracowana przez Dennisa Gioię. Dane empiryczne są stopniowo abstrahowane: surowe fragmenty tekstu → kody (first-order concepts) → tematy (second-order themes) → wymiary (aggregate dimensions). Celem jest zbudowanie data structure łączącej głos informatorów z interpretacją teoretyczną badacza. Narzędzie wspiera pełen cykl: kodowanie, grupowanie w tematy, generowanie wymiarów z uzasadnieniem, tabelę Gioia i eksport.',
+    en: 'A three-level qualitative analysis framework developed by Dennis Gioia. Empirical data is progressively abstracted: raw text segments → codes (first-order concepts) → themes (second-order themes) → dimensions (aggregate dimensions). The goal is to build a data structure linking informant voices with the researcher\'s theoretical interpretation. The tool supports the full cycle: coding, theme grouping, dimension generation with grounding, Gioia table, and export.'
+  },
+  info_codes: { pl: 'Kody (1st order)', en: 'Codes (1st order)' },
+  info_codes_text: {
+    pl: 'First-order concepts — etykiety nadawane bezpośrednio fragmentom danych, bliskie językowi informatorów. Docelowo 15–25 kodów w projekcie. Każdy kod może mieć memo analityczne (notatka badacza), kolor i oznaczenie in-vivo (dosłowny cytat). Kody są podstawą do budowania tematów wyższego rzędu. W narzędziu: nadajesz kody w widoku kodowania, zarządzasz nimi w zakładce Codebook (merge, rename, delete, split).',
+    en: 'First-order concepts — labels assigned directly to data segments, close to informant language. Target: 15–25 codes per project. Each code can have an analytical memo, color, and in-vivo flag (verbatim quote). Codes are the foundation for building higher-order themes. In the tool: assign codes in the coding view, manage them in the Codebook tab (merge, rename, delete, split).'
+  },
+  info_themes: { pl: 'Tematy (2nd order)', en: 'Themes (2nd order)' },
+  info_themes_text: {
+    pl: 'Second-order themes — kategorie teoretyczne grupujące 2–6 kodów na wyższym poziomie abstrakcji. Każdy temat powinien mieć jasną etykietę interpretacyjną (nie parafrazę kodów). Tematy można generować ręcznie lub z pomocą AI (wieloprzebiegowo: propozycja → krytyka → rewizja). W narzędziu: generujesz tematy w zakładce Codebook przyciskiem „Wygeneruj tematy (AI)" lub budujesz je ręcznie w Creative Coding (drag & drop kodów na płótnie).',
+    en: 'Second-order themes — theoretical categories grouping 2–6 codes at a higher abstraction level. Each theme should have a clear interpretive label (not a code paraphrase). Themes can be generated manually or with AI help (multi-pass: proposal → critique → revision). In the tool: generate themes in the Codebook tab via "Generate themes (AI)" or build them manually in Creative Coding (drag & drop codes on canvas).'
+  },
+  info_dimensions: { pl: 'Wymiary', en: 'Dimensions' },
+  info_dimensions_text: {
+    pl: 'Aggregate dimensions — najwyższy poziom abstrakcji w strukturze Gioia (docelowo 2–4). Każdy wymiar grupuje tematy 2nd-order i wymaga uzasadnienia teoretycznego: dlaczego te tematy tworzą spójną całość, jaka teoria lub mechanizm za tym stoi. W narzędziu: generujesz wymiary przyciskiem „Wygeneruj wymiary (AI)" w zakładce Codebook. Każdy wymiar otrzymuje uzasadnienie z odwołaniem do teorii/autora, które możesz edytować.',
+    en: 'Aggregate dimensions — the highest abstraction level in the Gioia structure (target: 2–4). Each dimension groups 2nd-order themes and requires theoretical grounding: why these themes form a coherent whole, what theory or mechanism underpins them. In the tool: generate dimensions via "Generate dimensions (AI)" in the Codebook tab. Each dimension receives a grounding statement referencing theory/author, which you can edit.'
+  },
+  info_creative: { pl: 'Creative coding', en: 'Creative coding' },
+  info_creative_text: {
+    pl: 'Wizualne grupowanie kodów w tematy metodą drag & drop na interaktywnym płótnie. Kody wyświetlane jako karty, które przeciągasz do stref tematycznych. Pozwala eksperymentować z różnymi konfiguracjami tematów bez trwałych zmian — zatwierdzasz dopiero, gdy układ Ci odpowiada. Dostępne w zakładce Codebook po wygenerowaniu lub ręcznym utworzeniu tematów.',
+    en: 'Visual grouping of codes into themes via drag & drop on an interactive canvas. Codes displayed as cards that you drag into theme zones. Lets you experiment with different theme configurations without permanent changes — you commit only when satisfied. Available in the Codebook tab after generating or manually creating themes.'
+  },
+  info_abduction: { pl: 'Pętla abdukcyjna', en: 'Abduction loop' },
+  info_abduction_text: {
+    pl: 'Re-kodowanie danych w świetle wygenerowanych tematów. Po pierwszym cyklu kodowania i tematyzacji narzędzie (w trybie automatycznym) ponownie przechodzi przez segmenty, sprawdzając, czy kody nadane wcześniej pasują do struktury tematycznej, czy wymagają korekty. Realizuje postulat abdukcji: iteracyjne przechodzenie między danymi a teorią. Diagnostyka pętli pokazuje, ile kodów zostało zmienionych i na jakie.',
+    en: 'Re-coding data in light of generated themes. After the first coding and theming cycle, the tool (in automatic mode) revisits segments, checking whether previously assigned codes fit the thematic structure or need correction. Implements the abduction principle: iterative movement between data and theory. Loop diagnostics show how many codes were changed and to what.'
+  },
+  info_grounding: { pl: 'Uzasadnienie teoretyczne', en: 'Theoretical grounding' },
+  info_grounding_text: {
+    pl: 'Tabela łącząca każdy wymiar z argumentem teoretycznym — teoria/autor + uzasadnienie, dlaczego dany zestaw tematów tworzy spójny wymiar. Edytowalna: możesz zmienić teorię, autora i treść uzasadnienia. Generowana automatycznie razem z wymiarami lub dodawana ręcznie. Widoczna w zakładce Codebook w sekcji wymiarów oraz w eksportowanym raporcie.',
+    en: 'A table linking each dimension to a theoretical argument — theory/author + justification for why a given set of themes forms a coherent dimension. Editable: you can change the theory, author, and justification content. Generated automatically with dimensions or added manually. Visible in the Codebook tab under dimensions and in the exported report.'
+  },
+  info_viz: { pl: 'Wizualizacja', en: 'Visualization' },
+  info_viz_text: {
+    pl: 'Zakładka Visualization zawiera: częstość kodów (wykres słupkowy), macierz współwystępowania kodów (które kody pojawiają się razem w tym samym segmencie), macierz kod × dokument (rozkład kodów w poszczególnych plikach źródłowych — wymaga ≥2 plików), diagnostyki (ostrzeżenia drift, brama saturacji), tabelę Gioia (podgląd pełnej struktury) i pętlę abdukcyjną. Macierze używają skróconych etykiet (K1, K2, D1, D2) z legendą poniżej.',
+    en: 'The Visualization tab contains: code frequency (bar chart), code co-occurrence matrix (which codes appear together in the same segment), code × document matrix (code distribution across source files — requires ≥2 files), diagnostics (drift warnings, saturation gate), Gioia table (full structure preview), and abduction loop. Matrices use compact labels (K1, K2, D1, D2) with a legend below.'
+  },
+
+  // ── Technical info toggles ──
+  info_inductive: { pl: 'Tryb indukcyjny', en: 'Inductive mode' },
+  info_inductive_text: {
+    pl: 'Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Nawigacja: ← → (skróty klawiszowe), cofanie: Ctrl+Z. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.',
+    en: 'The researcher codes independently. Full control over the process — AI does not intervene. Navigation: ← → (keyboard shortcuts), undo: Ctrl+Z. Recommended as a starting point, especially for experienced coders.'
+  },
+  info_counter: { pl: 'Kontrpropozycja', en: 'Counter-proposal' },
+  info_counter_text: {
+    pl: 'Badacz najpierw nadaje własny kod, potem AI proponuje alternatywę. Decyzja zawsze po stronie badacza: mój kod, propozycja AI, lub zmodyfikowany. Wymusza refleksję nad własnymi wyborami.',
+    en: 'The researcher first assigns their own code, then AI proposes an alternative. Decision always rests with the researcher: my code, AI proposal, or modified. Forces reflection on your own choices.'
+  },
+  info_assisted: { pl: 'Tryb asystowany', en: 'Assisted mode' },
+  info_assisted_text: {
+    pl: 'AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.',
+    en: 'AI proposes a code for each segment. The researcher accepts, modifies, or rejects. Useful for large datasets or deductive coding with a conceptual framework.'
+  },
   info_auto: { pl: 'Tryb automatyczny', en: 'Automatic mode' },
   info_auto_text: {
     pl: 'Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co N segmentów — batch size konfigurowalny w parametrach (domyślnie 10), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja, temperature=0 dla powtarzalności), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Przed startem wyświetlana jest analiza wstępna danych z sugestiami konfiguracji. Badacz koryguje wyniki w tabeli przeglądu — cofanie zmian przez Ctrl+Z.',
@@ -49,23 +106,6 @@ const I18N = {
     en: 'Drag & drop files (TXT, JSON, CSV, DOCX) or paste text. Multiple files create a shared segment pool — each segment retains its source file label. TXT: auto-detects speaker turns (Name: text) or splits by paragraphs. JSON: native QCT format or any object array. CSV: auto-detects columns (text/author/id). DOCX: text extraction, segmented like TXT. When importing into an existing session, choose: add to pool (merge) or replace.'
   },
   info_export: { pl: 'Eksport', en: 'Export' },
-
-  info_inductive_text: {
-    pl: 'Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Nawigacja: ← → (skróty klawiszowe), cofanie: Ctrl+Z. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.',
-    en: 'The researcher codes independently. Full control over the process — AI does not intervene. Navigation: ← → (keyboard shortcuts), undo: Ctrl+Z. Recommended as a starting point, especially for experienced coders.'
-  },
-  info_counter_text: {
-    pl: 'Badacz najpierw nadaje własny kod, potem AI proponuje alternatywę. Decyzja zawsze po stronie badacza: mój kod, propozycja AI, lub zmodyfikowany. Wymusza refleksję nad własnymi wyborami.',
-    en: 'The researcher first assigns their own code, then AI proposes an alternative. Decision always rests with the researcher: my code, AI proposal, or modified. Forces reflection on your own choices.'
-  },
-  info_assisted_text: {
-    pl: 'AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.',
-    en: 'AI proposes a code for each segment. The researcher accepts, modifies, or rejects. Useful for large datasets or deductive coding with a conceptual framework.'
-  },
-  info_gioia_text: {
-    pl: 'Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Creative Coding pozwala grupować kody w tematy metodą drag & drop. Wizualizacja obejmuje macierz współwystępowania kodów i macierz kod × dokument. Eksport do tabeli Markdown i REFI-QDA.',
-    en: 'Three-level structure: first-order concepts (empirical codes, 15–25) → second-order themes (theoretical categories, 4–8) → aggregate dimensions (2–4). Each theme should group 2–6 codes at a higher abstraction level. Dimensions require theoretical grounding. In-vivo codes shown in italics. Creative Coding lets you group codes into themes via drag & drop. Visualization includes code co-occurrence matrix and code × document matrix. Export to Markdown table and REFI-QDA.'
-  },
   info_export_text: {
     pl: 'JSON (pełny eksport z metadanymi, memo, kolorami kodów), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia), REFI-QDA (.qdpx — standard wymiany z MAXQDA, NVivo, ATLAS.ti). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.',
     en: 'JSON (full export with metadata, memos, code colors), CSV (compatible with MAXQDA/NVivo), Gioia table (Markdown), coding report (stats and warnings), REFI-QDA (.qdpx — interchange standard for MAXQDA, NVivo, ATLAS.ti). Codebook export (CSV) available in the Codebook tab. Quick coding export (CSV/JSON) available directly from the coding view. JSON is the canonical exchange format with the Claude plugin.'
