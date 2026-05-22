@@ -2136,10 +2136,21 @@ function applyMerge(idx) {
 // ─── AI generation (standalone — available in all modes, uses multi-pass) ───
 async function generateThemesAI() {
   const apiKey = document.getElementById('apiKey').value;
-  if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
+  const elLocal = document.getElementById('aiThemesResult');
+  if (currentProvider !== 'local' && !apiKey) {
+    const msg = t('coding_no_api');
+    showError(msg);
+    if (elLocal) elLocal.innerHTML = `<div class="error-msg">${escapeHtml(msg)}</div>`;
+    return;
+  }
 
   const codes = Object.entries(state.codebook).filter(([, v]) => v.frequency > 0).sort((a, b) => b[1].frequency - a[1].frequency);
-  if (codes.length < 3) { showError(t('gen_themes_min')); return; }
+  if (codes.length < 3) {
+    const msg = t('gen_themes_min');
+    showError(msg);
+    if (elLocal) elLocal.innerHTML = `<div class="error-msg">${escapeHtml(msg)}</div>`;
+    return;
+  }
 
   // Confirm overwrite if themes already exist
   if (Object.keys(state.themes).length > 0) {
@@ -2188,9 +2199,20 @@ async function generateThemesAI() {
 
 async function generateDimensionsAI() {
   const apiKey = document.getElementById('apiKey').value;
-  if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
+  const elLocal = document.getElementById('aiDimsResult');
+  if (currentProvider !== 'local' && !apiKey) {
+    const msg = t('coding_no_api');
+    showError(msg);
+    if (elLocal) elLocal.innerHTML = `<div class="error-msg">${escapeHtml(msg)}</div>`;
+    return;
+  }
 
-  if (Object.keys(state.themes).length < 2) { showError(t('gen_dims_min')); return; }
+  if (Object.keys(state.themes).length < 2) {
+    const msg = t('gen_dims_min');
+    showError(msg);
+    if (elLocal) elLocal.innerHTML = `<div class="error-msg">${escapeHtml(msg)}</div>`;
+    return;
+  }
 
   // Confirm overwrite if dimensions already exist
   if (Object.keys(state.dimensions).length > 0) {
@@ -2652,7 +2674,12 @@ function showStatus(msg) {
 
 function showError(msg) {
   const el = document.getElementById('errorMsg');
-  if (el) { el.textContent = msg; el.classList.add('visible'); setTimeout(() => el.classList.remove('visible'), 5000); }
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('visible');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => el.classList.remove('visible'), 5000);
+  }
 }
 
 // ─── Init ───
