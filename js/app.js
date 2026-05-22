@@ -1287,30 +1287,78 @@ function parseDimensionsResponse(response) {
   const lines = response.split('\n');
   let currentDim = '';
   let currentTheory = '', currentAuthor = '', currentGrounding = '';
-  for (const line of lines) {
-    if (line.toUpperCase().startsWith('DIMENSION:') || line.toUpperCase().startsWith('WYMIAR:')) {
-      // Save previous dimension
+  let collectingThemes = false;
+  let pendingThemes = [];
+  const allThemeNames = Object.keys(state.themes);
+
+  function matchTheme(raw) {
+    const t = raw.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+    if (!t) return null;
+    if (state.themes[t]) return t;
+    // Try fuzzy: theme name is a prefix or substring
+    return allThemeNames.find(k => k.toLowerCase() === t.toLowerCase())
+      || allThemeNames.find(k => t.toLowerCase().startsWith(k.toLowerCase()))
+      || allThemeNames.find(k => k.toLowerCase().startsWith(t.toLowerCase()))
+      || null;
+  }
+
+  function flushThemes() {
+    if (currentDim && pendingThemes.length) {
+      const matched = pendingThemes.map(matchTheme).filter(Boolean);
+      // Deduplicate
+      const unique = [...new Set(matched)];
+      if (unique.length) newDims[currentDim] = unique;
+    }
+    pendingThemes = [];
+    collectingThemes = false;
+  }
+
+  for (const rawLine of lines) {
+    // Strip Markdown formatting: ##, **, *, ---, etc.
+    const line = rawLine.replace(/^#{1,6}\s+/, '').replace(/\*\*/g, '').replace(/^\s*---+\s*$/, '').trim();
+    if (!line) continue;
+
+    const upper = line.toUpperCase();
+
+    if (upper.startsWith('DIMENSION:') || upper.startsWith('WYMIAR:')) {
+      flushThemes();
+      // Save previous dimension groundings
       if (currentDim && newDims[currentDim]) {
         groundings[currentDim] = { theory: currentTheory, author: currentAuthor, text: currentGrounding };
       }
       currentDim = line.split(':').slice(1).join(':').trim();
       currentTheory = ''; currentAuthor = ''; currentGrounding = '';
-    } else if ((line.toUpperCase().startsWith('THEMES:') || line.toUpperCase().startsWith('TEMATY:')) && currentDim) {
-      const allThemeNames = Object.keys(state.themes);
-      const dimThemes = line.split(':').slice(1).join(':').split(',').map(th => th.trim()).map(th => {
-        if (state.themes[th]) return th;
-        return allThemeNames.find(k => k.toLowerCase() === th.toLowerCase()) || null;
-      }).filter(Boolean);
-      if (dimThemes.length) newDims[currentDim] = dimThemes;
-    } else if ((line.toUpperCase().startsWith('THEORY:') || line.toUpperCase().startsWith('TEORIA:')) && currentDim) {
+    } else if ((upper.startsWith('THEMES:') || upper.startsWith('TEMATY:')) && currentDim) {
+      flushThemes();
+      collectingThemes = true;
+      // Themes may be on same line (comma-separated) or on following lines (bullet list)
+      const sameLine = line.split(':').slice(1).join(':').trim();
+      if (sameLine) {
+        // Could be comma-separated or single theme
+        sameLine.split(',').forEach(t => { if (t.trim()) pendingThemes.push(t.trim()); });
+      }
+    } else if ((upper.startsWith('THEORY:') || upper.startsWith('TEORIA:')) && currentDim) {
+      flushThemes();
       currentTheory = line.split(':').slice(1).join(':').trim();
-    } else if ((line.toUpperCase().startsWith('AUTHOR:') || line.toUpperCase().startsWith('AUTOR:')) && currentDim) {
+    } else if ((upper.startsWith('AUTHOR:') || upper.startsWith('AUTOR:')) && currentDim) {
+      flushThemes();
       currentAuthor = line.split(':').slice(1).join(':').trim();
-    } else if ((line.toUpperCase().startsWith('GROUNDING:') || line.toUpperCase().startsWith('UZASADNIENIE:')) && currentDim) {
+    } else if ((upper.startsWith('GROUNDING:') || upper.startsWith('UZASADNIENIE:')) && currentDim) {
+      flushThemes();
       currentGrounding = line.split(':').slice(1).join(':').trim();
+    } else if (collectingThemes && currentDim && /^[-•*]\s|^\d+\.\s/.test(line)) {
+      // Bullet or numbered list item — collect as theme
+      pendingThemes.push(line);
+    } else if (collectingThemes && currentDim) {
+      // Non-bullet line while collecting — might be continuation or end
+      // If it looks like a theme name (contains a known theme), add it
+      if (matchTheme(line)) pendingThemes.push(line);
+      else { flushThemes(); }
     }
   }
-  // Save last dimension
+  // Flush remaining
+  flushThemes();
+  // Save last dimension groundings
   if (currentDim && newDims[currentDim]) {
     groundings[currentDim] = { theory: currentTheory, author: currentAuthor, text: currentGrounding };
   }
@@ -1333,19 +1381,53 @@ function parseThemesResponse(response) {
   const themes = {};
   const lines = response.split('\n');
   let currentTheme = '';
-  for (const line of lines) {
-    if (line.toUpperCase().startsWith('THEME:') || line.toUpperCase().startsWith('TEMAT:')) {
+  let collectingCodes = false;
+  let pendingCodes = [];
+  const allCodeNames = Object.keys(state.codebook);
+
+  function matchCode(raw) {
+    const c = raw.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+    if (!c) return null;
+    if (state.codebook[c]) return c;
+    return allCodeNames.find(k => k.toLowerCase() === c.toLowerCase())
+      || allCodeNames.find(k => c.toLowerCase().startsWith(k.toLowerCase()))
+      || allCodeNames.find(k => k.toLowerCase().startsWith(c.toLowerCase()))
+      || null;
+  }
+
+  function flushCodes() {
+    if (currentTheme && pendingCodes.length) {
+      const matched = pendingCodes.map(matchCode).filter(Boolean);
+      const unique = [...new Set(matched)];
+      if (unique.length) themes[currentTheme] = unique;
+    }
+    pendingCodes = [];
+    collectingCodes = false;
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/^#{1,6}\s+/, '').replace(/\*\*/g, '').replace(/^\s*---+\s*$/, '').trim();
+    if (!line) continue;
+    const upper = line.toUpperCase();
+
+    if (upper.startsWith('THEME:') || upper.startsWith('TEMAT:')) {
+      flushCodes();
       currentTheme = line.split(':').slice(1).join(':').trim();
-    } else if ((line.toUpperCase().startsWith('CODES:') || line.toUpperCase().startsWith('KODY:')) && currentTheme) {
-      const allCodeNames = Object.keys(state.codebook);
-      const themeCodes = line.split(':').slice(1).join(':').split(',').map(c => c.trim()).map(c => {
-        if (state.codebook[c]) return c;
-        return allCodeNames.find(k => k.toLowerCase() === c.toLowerCase()) || null;
-      }).filter(Boolean);
-      if (themeCodes.length) themes[currentTheme] = themeCodes;
-      currentTheme = '';
+    } else if ((upper.startsWith('CODES:') || upper.startsWith('KODY:')) && currentTheme) {
+      flushCodes();
+      collectingCodes = true;
+      const sameLine = line.split(':').slice(1).join(':').trim();
+      if (sameLine) {
+        sameLine.split(',').forEach(c => { if (c.trim()) pendingCodes.push(c.trim()); });
+      }
+    } else if (collectingCodes && currentTheme && /^[-•*]\s|^\d+\.\s/.test(line)) {
+      pendingCodes.push(line);
+    } else if (collectingCodes && currentTheme) {
+      if (matchCode(line)) pendingCodes.push(line);
+      else flushCodes();
     }
   }
+  flushCodes();
   return themes;
 }
 
