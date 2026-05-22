@@ -1418,7 +1418,7 @@ function parseThemesResponse(response) {
 
     if (upper.startsWith('THEME:') || upper.startsWith('TEMAT:')) {
       flushCodes();
-      currentTheme = line.split(':').slice(1).join(':').trim();
+      currentTheme = toSentenceCase(line.split(':').slice(1).join(':').trim());
     } else if ((upper.startsWith('CODES:') || upper.startsWith('KODY:')) && currentTheme) {
       flushCodes();
       collectingCodes = true;
