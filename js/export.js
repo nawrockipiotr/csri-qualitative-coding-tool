@@ -8,6 +8,16 @@ function downloadFile(content, filename, mime) {
   URL.revokeObjectURL(url);
 }
 
+// Helper: safely set innerHTML/textContent on an element that may not exist
+function setPreview(html) {
+  const el = document.getElementById('exportPreview');
+  if (el) el.innerHTML = html;
+}
+function setPreviewText(text) {
+  const el = document.getElementById('exportPreview');
+  if (el) el.textContent = text;
+}
+
 function exportJSON() {
   const data = {
     metadata: {
@@ -49,7 +59,7 @@ function exportJSON() {
 
   const json = JSON.stringify(data, null, 2);
   downloadFile(json, `coding_export_${ts()}.json`, 'application/json');
-  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(json.substring(0, 2000))}${json.length > 2000 ? '\n...' : ''}</pre>`;
+  setPreview(`<pre class="export-preview">${escapeHtml(json.substring(0, 2000))}${json.length > 2000 ? '\n...' : ''}</pre>`);
 }
 
 function exportCSV() {
@@ -72,12 +82,12 @@ function exportCSV() {
 
   const csv = '﻿' + header + '\n' + rows.join('\n');
   downloadFile(csv, `coding_export_${ts()}.csv`, 'text/csv;charset=utf-8');
-  document.getElementById('exportPreview')?.textContent = `CSV: ${rows.length} ${t('export_csv_rows')}`;
+  setPreviewText(`CSV: ${rows.length} ${t('export_csv_rows')}`);
 }
 
 function exportGioia() {
   if (!Object.keys(state.themes).length) {
-    document.getElementById('exportPreview')?.textContent = t('export_no_themes');
+    setPreviewText(t('export_no_themes'));
     return;
   }
 
@@ -89,9 +99,10 @@ function exportGioia() {
       let first = true;
       for (const theme of dimThemes) {
         if (state.themes[theme]) {
-          const codes = state.themes[theme].map(c =>
-            state.codebook[c]?.type === 'in_vivo' ? `*${c}*` : c
-          ).join(', ');
+          const codes = state.themes[theme].map(c => {
+            const info = state.codebook[c];
+            return (info && info.type === 'in_vivo') ? `*${c}*` : c;
+          }).join(', ');
           lines.push(`| ${codes} | ${theme} | ${first ? dim : ''} |`);
           first = false;
         }
@@ -99,16 +110,17 @@ function exportGioia() {
     }
   } else {
     for (const [theme, codes] of Object.entries(state.themes)) {
-      const codesStr = codes.map(c =>
-        state.codebook[c]?.type === 'in_vivo' ? `*${c}*` : c
-      ).join(', ');
+      const codesStr = codes.map(c => {
+        const info = state.codebook[c];
+        return (info && info.type === 'in_vivo') ? `*${c}*` : c;
+      }).join(', ');
       lines.push(`| ${codesStr} | ${theme} | |`);
     }
   }
 
   const md = lines.join('\n');
   downloadFile(md, 'gioia_table.md', 'text/markdown');
-  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(md)}</pre>`;
+  setPreview(`<pre class="export-preview">${escapeHtml(md)}</pre>`);
 }
 
 function exportReport() {
@@ -153,12 +165,12 @@ ${(() => {
   })()}`;
 
   downloadFile(report, `coding_report_${ts()}.txt`, 'text/plain');
-  document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(report)}</pre>`;
+  setPreview(`<pre class="export-preview">${escapeHtml(report)}</pre>`);
 }
 
 function exportREFI_QDA() {
   if (typeof JSZip === 'undefined') {
-    document.getElementById('exportPreview')?.textContent = t('export_refi_no_jszip');
+    setPreviewText(t('export_refi_no_jszip'));
     return;
   }
 
@@ -180,7 +192,7 @@ function exportREFI_QDA() {
   // Build source GUIDs
   const sources = [...new Set(state.segments.map(s => s.source_file || 'data').filter(Boolean))];
   const sourceGuids = {};
-  sources.forEach(s => sourceGuids[s] = guid());
+  sources.forEach(s => { sourceGuids[s] = guid(); });
 
   // XML escape
   const xe = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -247,7 +259,7 @@ ${codingsXml}
     a.download = `coding_export_${ts()}.qdpx`;
     a.click();
     URL.revokeObjectURL(url);
-    document.getElementById('exportPreview')?.textContent = t('export_refi_done');
+    setPreviewText(t('export_refi_done'));
   });
 }
 

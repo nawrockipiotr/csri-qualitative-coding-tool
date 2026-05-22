@@ -19,6 +19,12 @@ if (typeof downloadFile === 'undefined') {
   };
 }
 
+// Safe confirm — falls back to true if window.confirm is blocked (sandboxed iframe)
+function safeConfirm(msg) {
+  try { return window.confirm(msg); }
+  catch (e) { return true; }
+}
+
 // ─── Info toggles (hero) ───
 function toggleInfo(panelId) {
   const panel = document.getElementById(panelId);
@@ -2154,7 +2160,7 @@ async function generateThemesAI() {
 
   // Confirm overwrite if themes already exist
   if (Object.keys(state.themes).length > 0) {
-    if (!confirm(t('gen_themes_overwrite'))) return;
+    if (!safeConfirm(t('gen_themes_overwrite'))) return;
   }
   pushUndo('themes');
 
@@ -2216,7 +2222,7 @@ async function generateDimensionsAI() {
 
   // Confirm overwrite if dimensions already exist
   if (Object.keys(state.dimensions).length > 0) {
-    if (!confirm(t('gen_dims_overwrite'))) return;
+    if (!safeConfirm(t('gen_dims_overwrite'))) return;
   }
   pushUndo('dimensions');
 
@@ -2723,7 +2729,7 @@ function dismissSession() {
 }
 
 function resetSession() {
-  if (!confirm(t('reset_confirm'))) return;
+  if (!safeConfirm(t('reset_confirm'))) return;
   dismissSession();
   undoStack.length = 0;
   // Clear form fields
