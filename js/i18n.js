@@ -5,8 +5,8 @@ let currentLang = localStorage.getItem('coding_tool_lang') || 'pl';
 const I18N = {
   // Hero
   hero_lead: {
-    pl: 'Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Cztery tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany, pełna automatyzacja), eksport do JSON/CSV/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.',
-    en: 'A qualitative coding tool for textual data using the Gioia methodology. Four coding modes, AI support (counter-proposals, assisted mode, full automation), export to JSON/CSV/Markdown. Data stays in your browser — no server required.'
+    pl: 'Narzędzie do kodowania jakościowego danych tekstowych z metodologią Gioia. Cztery tryby kodowania, wsparcie AI (kontrpropozycje, tryb asystowany, pełna automatyzacja), memo analityczne, kodowanie in-vivo, kolory kodów, macierze współwystępowania, Creative Coding (drag & drop), eksport do JSON/CSV/REFI-QDA/Markdown. Dane pozostają w przeglądarce — żaden serwer nie jest potrzebny.',
+    en: 'A qualitative coding tool for textual data using the Gioia methodology. Four coding modes, AI support (counter-proposals, assisted mode, full automation), analytical memos, in-vivo coding, code colors, co-occurrence matrices, Creative Coding (drag & drop), export to JSON/CSV/REFI-QDA/Markdown. Data stays in your browser — no server required.'
   },
   hero_howto_title: {
     pl: 'Jak korzystać z narzędzia',
@@ -63,12 +63,12 @@ const I18N = {
     en: 'AI proposes a code for each segment. The researcher accepts, modifies, or rejects. Useful for large datasets or deductive coding with a conceptual framework.'
   },
   info_gioia_text: {
-    pl: 'Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Eksport do tabeli Markdown.',
-    en: 'Three-level structure: first-order concepts (empirical codes, 15–25) → second-order themes (theoretical categories, 4–8) → aggregate dimensions (2–4). Each theme should group 2–6 codes at a higher abstraction level. Dimensions require theoretical grounding. In-vivo codes shown in italics. Export to Markdown table.'
+    pl: 'Trzypoziomowa struktura: first-order concepts (kody empiryczne, 15–25) → second-order themes (kategorie teoretyczne, 4–8) → aggregate dimensions (wymiary zagregowane, 2–4). Każdy temat powinien grupować 2–6 kodów na wyższym poziomie abstrakcji. Wymiary wymagają uzasadnienia teoretycznego. Kody in-vivo oznaczone kursywą. Creative Coding pozwala grupować kody w tematy metodą drag & drop. Wizualizacja obejmuje macierz współwystępowania kodów i macierz kod × dokument. Eksport do tabeli Markdown i REFI-QDA.',
+    en: 'Three-level structure: first-order concepts (empirical codes, 15–25) → second-order themes (theoretical categories, 4–8) → aggregate dimensions (2–4). Each theme should group 2–6 codes at a higher abstraction level. Dimensions require theoretical grounding. In-vivo codes shown in italics. Creative Coding lets you group codes into themes via drag & drop. Visualization includes code co-occurrence matrix and code × document matrix. Export to Markdown table and REFI-QDA.'
   },
   info_export_text: {
-    pl: 'JSON (pełny eksport z metadanymi), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.',
-    en: 'JSON (full export with metadata), CSV (compatible with MAXQDA/NVivo), Gioia table (Markdown), coding report (stats and warnings). Codebook export (CSV) available in the Codebook tab. Quick coding export (CSV/JSON) available directly from the coding view. JSON is the canonical exchange format with the Claude plugin.'
+    pl: 'JSON (pełny eksport z metadanymi, memo, kolorami kodów), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia), REFI-QDA (.qdpx — standard wymiany z MAXQDA, NVivo, ATLAS.ti). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.',
+    en: 'JSON (full export with metadata, memos, code colors), CSV (compatible with MAXQDA/NVivo), Gioia table (Markdown), coding report (stats and warnings), REFI-QDA (.qdpx — interchange standard for MAXQDA, NVivo, ATLAS.ti). Codebook export (CSV) available in the Codebook tab. Quick coding export (CSV/JSON) available directly from the coding view. JSON is the canonical exchange format with the Claude plugin.'
   },
   info_session: { pl: 'Zapis sesji', en: 'Session persistence' },
   info_session_text: {
