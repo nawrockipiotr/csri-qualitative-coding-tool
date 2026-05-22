@@ -2,6 +2,23 @@
 
 const TOOL_VERSION = 'v0.1';
 
+// Fallback helpers — normally defined in export.js, but guard against load-order issues
+if (typeof escapeHtml === 'undefined') {
+  window.escapeHtml = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+if (typeof csvEsc === 'undefined') {
+  window.csvEsc = s => s && (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : (s || '');
+}
+if (typeof downloadFile === 'undefined') {
+  window.downloadFile = (content, filename, mime) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+}
+
 // ─── Info toggles (hero) ───
 function toggleInfo(panelId) {
   const panel = document.getElementById(panelId);
