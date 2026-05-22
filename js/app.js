@@ -2455,23 +2455,33 @@ function renderCodeDocMatrix() {
   }
   const maxVal = Math.max(1, ...Object.values(matrix).flatMap(row => Object.values(row)));
 
-  const headerCells = files.map(f => `<th class="matrix-col-header" title="${escapeHtml(f)}"><span>${escapeHtml(f)}</span></th>`).join('');
+  // Numeric labels
+  const codeLabels = {};
+  topCodes.forEach((c, idx) => { codeLabels[c] = 'K' + (idx + 1); });
+  const fileLabels = {};
+  files.forEach((f, idx) => { fileLabels[f] = 'D' + (idx + 1); });
+
+  const headerCells = files.map(f => `<th class="matrix-col-header-num" title="${escapeHtml(f)}">${fileLabels[f]}</th>`).join('');
   const rows = topCodes.map(code => {
-    const color = state.codebook[code]?.color || '';
     const cells = files.map(f => {
       const v = matrix[code][f];
       const intensity = v / maxVal;
       const bg = v ? `rgba(59,130,246,${0.15 + intensity * 0.7})` : '';
       return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${escapeHtml(code)} × ${escapeHtml(f)}: ${v}">${v || ''}</td>`;
     }).join('');
-    return `<tr><td class="matrix-row-label">${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(code)}</td>${cells}</tr>`;
+    return `<tr><td class="matrix-row-label-num" title="${escapeHtml(code)}">${codeLabels[code]}</td>${cells}</tr>`;
   }).join('');
+
+  const codeLegend = topCodes.map(c => `<div class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</div>`).join('');
+  const fileLegend = files.map(f => `<div class="cooc-legend-item"><strong>${fileLabels[f]}</strong> — ${escapeHtml(f)}</div>`).join('');
 
   return `<h3>${t('viz_code_doc_matrix')}</h3>
     <div class="matrix-wrap"><table class="matrix-table">
       <thead><tr><th></th>${headerCells}</tr></thead>
       <tbody>${rows}</tbody>
-    </table></div>`;
+    </table></div>
+    <div class="cooc-legend">${fileLegend}</div>
+    <div class="cooc-legend" style="margin-top:0.4rem">${codeLegend}</div>`;
 }
 
 // ─── Co-occurrence matrix (proximity-based) ───
