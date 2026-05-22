@@ -2454,16 +2454,16 @@ function renderCodeDocMatrix() {
   }
   const maxVal = Math.max(1, ...Object.values(matrix).flatMap(row => Object.values(row)));
 
-  const headerCells = files.map(f => `<th class="matrix-file-header" title="${escapeHtml(f)}">${escapeHtml(f.length > 12 ? f.substring(0, 10) + '..' : f)}</th>`).join('');
+  const headerCells = files.map(f => `<th class="matrix-col-header" title="${escapeHtml(f)}"><span>${escapeHtml(f)}</span></th>`).join('');
   const rows = topCodes.map(code => {
     const color = state.codebook[code]?.color || '';
     const cells = files.map(f => {
       const v = matrix[code][f];
       const intensity = v / maxVal;
       const bg = v ? `rgba(59,130,246,${0.15 + intensity * 0.7})` : '';
-      return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${code} × ${f}: ${v}">${v || ''}</td>`;
+      return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${escapeHtml(code)} × ${escapeHtml(f)}: ${v}">${v || ''}</td>`;
     }).join('');
-    return `<tr><td class="matrix-code-label">${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(code)}</td>${cells}</tr>`;
+    return `<tr><td class="matrix-row-label">${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(code)}</td>${cells}</tr>`;
   }).join('');
 
   return `<h3>${t('viz_code_doc_matrix')}</h3>
@@ -2496,16 +2496,16 @@ function renderCoOccurrenceMatrix() {
   }
 
   const maxVal = Math.max(1, ...topCodes.flatMap(c => topCodes.map(c2 => cooccur[c][c2])));
-  const headerCells = topCodes.map(c => `<th class="matrix-file-header" title="${escapeHtml(c)}">${escapeHtml(c.length > 8 ? c.substring(0, 7) + '..' : c)}</th>`).join('');
+  const headerCells = topCodes.map(c => `<th class="matrix-col-header" title="${escapeHtml(c)}"><span>${escapeHtml(c)}</span></th>`).join('');
   const rows = topCodes.map(code => {
     const cells = topCodes.map(c2 => {
       if (code === c2) return '<td class="matrix-cell matrix-diag"></td>';
       const v = cooccur[code][c2];
       const intensity = v / maxVal;
       const bg = v ? `rgba(234,88,12,${0.15 + intensity * 0.7})` : '';
-      return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${code} ↔ ${c2}: ${v}">${v || ''}</td>`;
+      return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${escapeHtml(code)} ↔ ${escapeHtml(c2)}: ${v}">${v || ''}</td>`;
     }).join('');
-    return `<tr><td class="matrix-code-label">${escapeHtml(code.length > 12 ? code.substring(0, 11) + '..' : code)}</td>${cells}</tr>`;
+    return `<tr><td class="matrix-row-label">${escapeHtml(code)}</td>${cells}</tr>`;
   }).join('');
 
   return `<h3>${t('viz_cooccurrence')}</h3>
