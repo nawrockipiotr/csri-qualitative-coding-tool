@@ -1066,6 +1066,16 @@ function cancelAuto() {
   renderCodingView();
 }
 
+function updateAutoProgress() {
+  const coded = state.codedRecords.length;
+  const total = state.segments.length;
+  const pct = total ? Math.round(coded / total * 100) : 0;
+  const bar = document.querySelector('.coding-progress .progress-bar');
+  const txt = document.querySelector('.coding-progress .progress-text');
+  if (bar) bar.style.width = pct + '%';
+  if (txt) txt.textContent = `${t('coding_coded')} ${coded}/${total} (${pct}%)`;
+}
+
 async function runAutoCoding() {
   const apiKey = document.getElementById('apiKey').value;
   if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); autoRunning = false; return; }
@@ -1137,6 +1147,7 @@ async function runAutoCoding() {
       };
 
       saveRecord(record, true);
+      updateAutoProgress();
       const batchN = state.batchSize || 10;
       if ((i + 1) % batchN === 0) {
         saveSession();
