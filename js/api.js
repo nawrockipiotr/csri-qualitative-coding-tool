@@ -29,6 +29,8 @@ function formatApiError(status, serverMsg, provider) {
   }
 }
 
+const API_TIMEOUT_MS = 60000; // 60 seconds per call
+
 async function callAIWithRetry(apiKey, systemPrompt, userContent, maxRetries = 3, options = {}) {
   let lastError;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -48,6 +50,14 @@ async function callAIWithRetry(apiKey, systemPrompt, userContent, maxRetries = 3
   throw lastError;
 }
 
+function withTimeout(signal) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+  if (signal) signal.addEventListener('abort', () => ctrl.abort());
+  const cleanup = () => clearTimeout(timer);
+  return { signal: ctrl.signal, cleanup };
+}
+
 async function callAI(apiKey, systemPrompt, userContent, options = {}) {
   if (currentProvider === 'anthropic') return callAnthropic(apiKey, systemPrompt, userContent, options);
   if (currentProvider === 'openai') return callOpenAI(apiKey, systemPrompt, userContent, options);
@@ -63,23 +73,26 @@ async function callAnthropic(apiKey, systemPrompt, userContent, options = {}) {
     messages: [{ role: 'user', content: userContent }]
   };
   if (options.temperature !== undefined) body.temperature = options.temperature;
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    signal: abortController?.signal,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(formatApiError(resp.status, err.error?.message, 'Anthropic'));
-  }
-  const data = await resp.json();
-  return data.content.map(c => c.text || '').join('');
+  const { signal, cleanup } = withTimeout(abortController?.signal);
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(formatApiError(resp.status, err.error?.message, 'Anthropic'));
+    }
+    const data = await resp.json();
+    return data.content.map(c => c.text || '').join('');
+  } finally { cleanup(); }
 }
 
 async function callOpenAI(apiKey, systemPrompt, userContent, options = {}) {
@@ -92,42 +105,48 @@ async function callOpenAI(apiKey, systemPrompt, userContent, options = {}) {
     ]
   };
   if (options.temperature !== undefined) body.temperature = options.temperature;
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    signal: abortController?.signal,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(body)
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(formatApiError(resp.status, err.error?.message, 'OpenAI'));
-  }
-  const data = await resp.json();
-  return data.choices[0]?.message?.content || '';
+  const { signal, cleanup } = withTimeout(abortController?.signal);
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(formatApiError(resp.status, err.error?.message, 'OpenAI'));
+    }
+    const data = await resp.json();
+    return data.choices[0]?.message?.content || '';
+  } finally { cleanup(); }
 }
 
 async function callGoogle(apiKey, systemPrompt, userContent, options = {}) {
   const genConfig = { maxOutputTokens: 4096 };
   if (options.temperature !== undefined) genConfig.temperature = options.temperature;
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    signal: abortController?.signal,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ parts: [{ text: userContent }] }],
-      generationConfig: genConfig
-    })
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(formatApiError(resp.status, err.error?.message, 'Google'));
-  }
-  const data = await resp.json();
-  return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+  const { signal, cleanup } = withTimeout(abortController?.signal);
+  try {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${getModel()}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: userContent }] }],
+        generationConfig: genConfig
+      })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(formatApiError(resp.status, err.error?.message, 'Google'));
+    }
+    const data = await resp.json();
+    return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+  } finally { cleanup(); }
 }
 
 async function callLocal(apiKey, systemPrompt, userContent, options = {}) {
@@ -145,22 +164,22 @@ async function callLocal(apiKey, systemPrompt, userContent, options = {}) {
   };
   if (options.temperature !== undefined) body.temperature = options.temperature;
 
-  let resp;
+  const { signal, cleanup } = withTimeout(abortController?.signal);
   try {
-    resp = await fetch(url, {
+    const resp = await fetch(url, {
       method: 'POST',
-      signal: abortController?.signal,
+      signal,
       headers,
       body: JSON.stringify(body)
     });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(formatApiError(resp.status, err.error?.message, 'Local'));
+    }
+    const data = await resp.json();
+    return data.choices[0]?.message?.content || '';
   } catch (fetchErr) {
     if (fetchErr.name === 'AbortError') throw fetchErr;
     throw new Error(formatApiError(0, fetchErr.message, 'Local'));
-  }
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(formatApiError(resp.status, err.error?.message, 'Local'));
-  }
-  const data = await resp.json();
-  return data.choices[0]?.message?.content || '';
+  } finally { cleanup(); }
 }
