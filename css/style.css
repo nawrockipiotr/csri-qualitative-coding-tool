@@ -846,12 +846,14 @@ h1 {
 .gioia-table td { padding: 0.5rem; border-bottom: 1px solid var(--surface2); font-size: 0.9rem; vertical-align: top; }
 
 /* Frequency bars */
-.code-bars { display: flex; flex-direction: column; gap: 0.3rem; }
+.code-bars { display: flex; flex-direction: column; gap: 0.6rem; }
+.bar-item { display: flex; flex-direction: column; gap: 0.15rem; }
+.bar-name { font-size: 0.8rem; color: var(--text-dim); line-height: 1.3; }
 .bar-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
 .bar-label { width: 280px; flex-shrink: 0; text-align: right; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
-.bar-track { flex: 1; height: 18px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.bar-track { flex: 1; height: 16px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--accent-teal); border-radius: 4px; transition: width 0.3s; }
-.bar-count { width: 30px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+.bar-count { width: 30px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; text-align: right; }
 
 /* ═══ Export ═══ */
 .export-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -1737,6 +1739,6 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .counter-comparison { grid-template-columns: 1fr; }
   .params-row { grid-template-columns: 1fr; }
-  .bar-label { width: 140px; }
+  .bar-name { font-size: 0.75rem; }
   .matrix-row-label-short { max-width: 180px; }
 }

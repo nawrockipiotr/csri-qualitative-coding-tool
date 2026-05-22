@@ -2516,8 +2516,7 @@ function renderVisualizationView() {
     <h3>${t('viz_freq')}</h3>
     <div class="code-bars">${Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c, i]) => {
       const w = Math.round(i.frequency / totalCoded * 100);
-      const shortLabel = c.length > 60 ? c.substring(0, 57) + '...' : c;
-      return `<div class="bar-row"><span class="bar-label" title="${escapeHtml(c)}">${escapeHtml(shortLabel)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(w, 2)}%"></div></div><span class="bar-count">${i.frequency}</span></div>`;
+      return `<div class="bar-item"><div class="bar-name">${escapeHtml(c)}</div><div class="bar-row"><div class="bar-track"><div class="bar-fill" style="width:${Math.max(w, 2)}%"></div></div><span class="bar-count">${i.frequency}</span></div></div>`;
     }).join('')}</div>
   `;
   lucide.createIcons();
