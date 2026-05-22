@@ -263,6 +263,272 @@ ${codingsXml}
   });
 }
 
+// ─── HTML Visualization Export (standalone) ───
+function exportVisualizationHTML() {
+  const codes = state.codebook;
+  const records = state.codedRecords;
+  if (!records.length) { setPreviewText(t('empty_data')); return; }
+
+  const totalCoded = records.length;
+  const totalCodes = Object.keys(codes).length;
+  const singletons = Object.values(codes).filter(c => c.frequency === 1).length;
+  const singletonPct = Math.round(singletons / totalCodes * 100);
+  const overloaded = Object.entries(codes).filter(([, c]) => c.frequency > totalCoded * 0.15);
+
+  // Gioia table
+  let gioiaHtml = '';
+  if (Object.keys(state.themes).length) {
+    let rows = '';
+    if (Object.keys(state.dimensions).length) {
+      for (const [dim, dimThemes] of Object.entries(state.dimensions)) {
+        let first = true;
+        for (const theme of dimThemes) {
+          if (state.themes[theme]) {
+            const codesStr = state.themes[theme].map(c => {
+              const info = codes[c];
+              return (info && info.type === 'in_vivo') ? `<em>${escapeHtml(c)}</em>` : escapeHtml(c);
+            }).join(', ');
+            rows += `<tr><td>${codesStr}</td><td>${escapeHtml(theme)}</td><td>${first ? escapeHtml(dim) : ''}</td></tr>`;
+            first = false;
+          }
+        }
+      }
+    } else {
+      for (const [theme, tCodes] of Object.entries(state.themes)) {
+        const codesStr = tCodes.map(c => {
+          const info = codes[c];
+          return (info && info.type === 'in_vivo') ? `<em>${escapeHtml(c)}</em>` : escapeHtml(c);
+        }).join(', ');
+        rows += `<tr><td>${codesStr}</td><td>${escapeHtml(theme)}</td><td></td></tr>`;
+      }
+    }
+    gioiaHtml = `<h2>Gioia Data Structure</h2>
+      <table class="gioia"><thead><tr><th>First-Order Concepts</th><th>Second-Order Themes</th><th>Aggregate Dimensions</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }
+
+  // Theoretical grounding
+  let groundingHtml = '';
+  if (state._dimensionGroundings && Object.keys(state._dimensionGroundings).length) {
+    const cards = Object.entries(state._dimensionGroundings).map(([dim, g]) => {
+      const isRich = typeof g === 'object';
+      const theory = isRich ? (g.theory || '') : '';
+      const author = isRich ? (g.author || '') : '';
+      const text = isRich ? (g.text || '') : (g || '');
+      return `<div class="grounding"><strong>${escapeHtml(dim)}</strong>
+        ${theory ? `<br>Theory: ${escapeHtml(theory)}` : ''}
+        ${author ? `<br>Author(s): ${escapeHtml(author)}` : ''}
+        ${text ? `<br>${escapeHtml(text)}` : ''}</div>`;
+    }).join('');
+    groundingHtml = `<h2>Theoretical Grounding</h2>${cards}`;
+  }
+
+  // Frequency chart (horizontal bars via CSS)
+  const sortedCodes = Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 20);
+  const maxFreq = sortedCodes.length ? sortedCodes[0][1].frequency : 1;
+  const barsHtml = sortedCodes.map(([c, info]) => {
+    const w = Math.round(info.frequency / maxFreq * 100);
+    const color = info.color || '#3b82f6';
+    return `<div class="bar-row"><span class="bar-label">${escapeHtml(c)}</span><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><span class="bar-count">${info.frequency}</span></div>`;
+  }).join('');
+
+  // Code × Document matrix
+  let matrixHtml = '';
+  const files = [...new Set(records.map(r => r.source_file).filter(Boolean))];
+  if (files.length >= 2) {
+    const topCodes = Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 20).map(([c]) => c);
+    const matrix = {};
+    for (const code of topCodes) { matrix[code] = {}; for (const f of files) matrix[code][f] = 0; }
+    for (const r of records) { if (r.source_file && matrix[r.first_order_code]) matrix[r.first_order_code][r.source_file]++; }
+    const maxVal = Math.max(1, ...Object.values(matrix).flatMap(row => Object.values(row)));
+    const hdr = files.map(f => `<th title="${escapeHtml(f)}">${escapeHtml(f.length > 15 ? f.substring(0, 13) + '..' : f)}</th>`).join('');
+    const mrows = topCodes.map(code => {
+      const cells = files.map(f => {
+        const v = matrix[code][f];
+        const bg = v ? `background:rgba(59,130,246,${0.15 + v / maxVal * 0.7})` : '';
+        return `<td style="${bg}">${v || ''}</td>`;
+      }).join('');
+      return `<tr><td class="row-label">${escapeHtml(code)}</td>${cells}</tr>`;
+    }).join('');
+    matrixHtml = `<h2>Code × Document Matrix</h2><table class="matrix"><thead><tr><th></th>${hdr}</tr></thead><tbody>${mrows}</tbody></table>`;
+  }
+
+  // Co-occurrence matrix
+  let cooccurHtml = '';
+  const topCo = Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c]) => c);
+  if (topCo.length >= 3) {
+    const co = {};
+    for (const c of topCo) { co[c] = {}; for (const c2 of topCo) co[c][c2] = 0; }
+    for (let i = 0; i < records.length; i++) {
+      const r1 = records[i];
+      if (!topCo.includes(r1.first_order_code)) continue;
+      for (let j = i + 1; j < Math.min(i + 3, records.length); j++) {
+        const r2 = records[j];
+        if (!topCo.includes(r2.first_order_code) || r1.first_order_code === r2.first_order_code) continue;
+        co[r1.first_order_code][r2.first_order_code]++;
+        co[r2.first_order_code][r1.first_order_code]++;
+      }
+    }
+    const maxCo = Math.max(1, ...topCo.flatMap(c => topCo.map(c2 => co[c][c2])));
+    const chdr = topCo.map(c => `<th title="${escapeHtml(c)}">${escapeHtml(c.length > 8 ? c.substring(0, 7) + '..' : c)}</th>`).join('');
+    const crows = topCo.map(code => {
+      const cells = topCo.map(c2 => {
+        if (code === c2) return '<td class="diag-cell"></td>';
+        const v = co[code][c2];
+        const bg = v ? `background:rgba(234,88,12,${0.15 + v / maxCo * 0.7})` : '';
+        return `<td style="${bg}">${v || ''}</td>`;
+      }).join('');
+      return `<tr><td class="row-label">${escapeHtml(code.length > 12 ? code.substring(0, 11) + '..' : code)}</td>${cells}</tr>`;
+    }).join('');
+    cooccurHtml = `<h2>Co-occurrence Matrix</h2><p class="hint">Proximity-based: codes within 2 segments of each other</p><table class="matrix"><thead><tr><th></th>${chdr}</tr></thead><tbody>${crows}</tbody></table>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="${currentLang || 'en'}">
+<head>
+<meta charset="UTF-8">
+<title>Qualitative Coding — Visualization Report</title>
+<style>
+  :root { --bg: #fff; --text: #1e293b; --border: #e2e8f0; --accent: #3b82f6; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0f172a; --text: #e2e8f0; --border: #334155; --accent: #60a5fa; } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; color: var(--text); background: var(--bg); padding: 2rem; max-width: 1100px; margin: 0 auto; line-height: 1.6; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
+  .meta { color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+  .diag-item { padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+  .diag-ok { background: #dcfce7; color: #166534; }
+  .diag-warn { background: #fef3c7; color: #92400e; }
+  .diag-error { background: #fee2e2; color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 1rem; font-size: 0.85rem; }
+  th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  .gioia td:first-child { max-width: 400px; }
+  .gioia em { font-style: italic; color: var(--accent); }
+  .matrix { font-size: 0.75rem; }
+  .matrix th { writing-mode: vertical-rl; text-orientation: mixed; padding: 0.3rem; white-space: nowrap; }
+  .matrix td { text-align: center; padding: 0.25rem; min-width: 28px; }
+  .matrix .row-label { text-align: left; font-weight: 500; white-space: nowrap; }
+  .matrix .diag-cell { background: #f1f5f9; }
+  .bar-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0; font-size: 0.8rem; }
+  .bar-label { width: 180px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 18px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; min-width: 2px; }
+  .bar-count { width: 30px; text-align: right; font-weight: 600; flex-shrink: 0; }
+  .grounding { background: #f8fafc; border-left: 3px solid var(--accent); padding: 0.6rem 0.8rem; margin: 0.5rem 0; border-radius: 4px; font-size: 0.85rem; }
+  .hint { color: #64748b; font-size: 0.8rem; margin-bottom: 0.5rem; }
+  @media print { body { padding: 1rem; } h2 { break-after: avoid; } table { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<h1>Qualitative Coding — Visualization Report</h1>
+<div class="meta">
+  Coder: ${escapeHtml(state.coderId || '—')} | Mode: ${escapeHtml(state.codingMode || '—')} |
+  Segments: ${state.segments.length} | Coded: ${totalCoded} | Codes: ${totalCodes} |
+  Themes: ${Object.keys(state.themes).length} | Dimensions: ${Object.keys(state.dimensions).length} |
+  Exported: ${new Date().toISOString().split('T')[0]}
+</div>
+
+<h2>Diagnostics</h2>
+<div class="diag-grid">
+  <div class="diag-item ${singletonPct > 25 ? 'diag-error' : singletonPct > 10 ? 'diag-warn' : 'diag-ok'}">Singletons: ${singletons}/${totalCodes} (${singletonPct}%)</div>
+  <div class="diag-item ${overloaded.length ? 'diag-error' : 'diag-ok'}">Overloaded codes: ${overloaded.length}${overloaded.length ? ' — ' + overloaded.map(([c]) => escapeHtml(c)).join(', ') : ''}</div>
+</div>
+
+${gioiaHtml}
+${groundingHtml}
+
+<h2>Code Frequency (top 20)</h2>
+${barsHtml}
+
+${matrixHtml}
+${cooccurHtml}
+</body>
+</html>`;
+
+  downloadFile(html, `visualization_report_${ts()}.html`, 'text/html');
+  setPreviewText(t('export_viz_done'));
+}
+
+// ─── SVG Gioia Table Export ───
+function exportGioiaSVG() {
+  if (!Object.keys(state.themes).length) { setPreviewText(t('export_no_themes')); return; }
+
+  const codes = state.codebook;
+  const padding = 20;
+  const colWidths = [320, 220, 220];
+  const totalW = colWidths[0] + colWidths[1] + colWidths[2] + padding * 2;
+  const rowH = 32;
+  const headerH = 36;
+  const fontSize = 12;
+
+  // Build rows
+  const tableRows = [];
+  if (Object.keys(state.dimensions).length) {
+    for (const [dim, dimThemes] of Object.entries(state.dimensions)) {
+      let first = true;
+      for (const theme of dimThemes) {
+        if (state.themes[theme]) {
+          const codesStr = state.themes[theme].map(c => {
+            const info = codes[c];
+            return (info && info.type === 'in_vivo') ? `"${c}"` : c;
+          }).join(', ');
+          tableRows.push({ codes: codesStr, theme, dim: first ? dim : '' });
+          first = false;
+        }
+      }
+    }
+  } else {
+    for (const [theme, tCodes] of Object.entries(state.themes)) {
+      const codesStr = tCodes.map(c => {
+        const info = codes[c];
+        return (info && info.type === 'in_vivo') ? `"${c}"` : c;
+      }).join(', ');
+      tableRows.push({ codes: codesStr, theme, dim: '' });
+    }
+  }
+
+  const totalH = headerH + tableRows.length * rowH + padding * 2;
+  const xe = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Truncate long text
+  const trunc = (s, max) => s.length > max ? s.substring(0, max - 2) + '..' : s;
+
+  let rowsSvg = '';
+  tableRows.forEach((r, i) => {
+    const y = padding + headerH + i * rowH;
+    const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';
+    rowsSvg += `<rect x="${padding}" y="${y}" width="${colWidths[0] + colWidths[1] + colWidths[2]}" height="${rowH}" fill="${bg}" stroke="#e2e8f0"/>`;
+    // Column separators
+    rowsSvg += `<line x1="${padding + colWidths[0]}" y1="${y}" x2="${padding + colWidths[0]}" y2="${y + rowH}" stroke="#e2e8f0"/>`;
+    rowsSvg += `<line x1="${padding + colWidths[0] + colWidths[1]}" y1="${y}" x2="${padding + colWidths[0] + colWidths[1]}" y2="${y + rowH}" stroke="#e2e8f0"/>`;
+    // Text
+    rowsSvg += `<text x="${padding + 6}" y="${y + rowH / 2 + 4}" font-size="${fontSize}" fill="#1e293b">${xe(trunc(r.codes, 50))}</text>`;
+    rowsSvg += `<text x="${padding + colWidths[0] + 6}" y="${y + rowH / 2 + 4}" font-size="${fontSize}" fill="#1e293b" font-weight="500">${xe(trunc(r.theme, 30))}</text>`;
+    if (r.dim) rowsSvg += `<text x="${padding + colWidths[0] + colWidths[1] + 6}" y="${y + rowH / 2 + 4}" font-size="${fontSize}" fill="#1e293b" font-weight="600">${xe(trunc(r.dim, 30))}</text>`;
+  });
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}">
+  <style>text { font-family: 'Inter', -apple-system, Helvetica, sans-serif; }</style>
+  <!-- Header -->
+  <rect x="${padding}" y="${padding}" width="${colWidths[0] + colWidths[1] + colWidths[2]}" height="${headerH}" fill="#3b82f6" rx="4"/>
+  <text x="${padding + 6}" y="${padding + headerH / 2 + 5}" font-size="13" fill="white" font-weight="600">First-Order Concepts</text>
+  <text x="${padding + colWidths[0] + 6}" y="${padding + headerH / 2 + 5}" font-size="13" fill="white" font-weight="600">Second-Order Themes</text>
+  <text x="${padding + colWidths[0] + colWidths[1] + 6}" y="${padding + headerH / 2 + 5}" font-size="13" fill="white" font-weight="600">Aggregate Dimensions</text>
+  <line x1="${padding + colWidths[0]}" y1="${padding}" x2="${padding + colWidths[0]}" y2="${padding + headerH}" stroke="rgba(255,255,255,0.3)"/>
+  <line x1="${padding + colWidths[0] + colWidths[1]}" y1="${padding}" x2="${padding + colWidths[0] + colWidths[1]}" y2="${padding + headerH}" stroke="rgba(255,255,255,0.3)"/>
+  <!-- Rows -->
+  ${rowsSvg}
+  <!-- Footer -->
+  <text x="${padding}" y="${totalH - 4}" font-size="9" fill="#94a3b8">QCT ${TOOL_VERSION} — ${new Date().toISOString().split('T')[0]} — ${state.coderId || 'researcher'}</text>
+</svg>`;
+
+  downloadFile(svg, `gioia_table_${ts()}.svg`, 'image/svg+xml');
+  setPreviewText(t('export_svg_done'));
+}
+
 // ─── Helpers ───
 function ts() { return new Date().toISOString().replace(/[:.]/g, '').substring(0, 15); }
 function csvEsc(s) { return s && (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : (s || ''); }

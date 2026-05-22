@@ -2636,6 +2636,8 @@ function renderExportView() {
       <button class="export-btn" onclick="exportGioia()"><i data-lucide="layout-grid" class="icon-sm"></i> ${t('export_gioia')}</button>
       <button class="export-btn" onclick="exportReport()"><i data-lucide="file-text" class="icon-sm"></i> ${t('export_report')}</button>
       <button class="export-btn" onclick="exportREFI_QDA()"><i data-lucide="package" class="icon-sm"></i> ${t('export_refi')}</button>
+      <button class="export-btn" onclick="exportVisualizationHTML()"><i data-lucide="layout-dashboard" class="icon-sm"></i> ${t('export_viz_html')}</button>
+      <button class="export-btn" onclick="exportGioiaSVG()" ${!Object.keys(state.themes).length ? 'disabled' : ''}><i data-lucide="image" class="icon-sm"></i> ${t('export_gioia_svg')}</button>
     </div>
     <div id="exportPreview"></div>
   `;

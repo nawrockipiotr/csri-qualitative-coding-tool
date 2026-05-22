@@ -626,6 +626,12 @@ const I18N = {
   export_refi: { pl: 'REFI-QDA (.qdpx)', en: 'REFI-QDA (.qdpx)' },
   export_refi_done: { pl: 'Plik REFI-QDA wygenerowany.', en: 'REFI-QDA file generated.' },
   export_refi_no_jszip: { pl: 'Brak biblioteki JSZip — odśwież stronę.', en: 'JSZip library not loaded — refresh the page.' },
+
+  // Visualization export
+  export_viz_html: { pl: 'Raport HTML (wizualizacje)', en: 'HTML Report (visualizations)' },
+  export_gioia_svg: { pl: 'Tabela Gioia (SVG)', en: 'Gioia Table (SVG)' },
+  export_viz_done: { pl: 'Raport HTML wygenerowany.', en: 'HTML report generated.' },
+  export_svg_done: { pl: 'Tabela Gioia SVG wygenerowana.', en: 'Gioia table SVG generated.' },
 };
 
 function t(key) {
