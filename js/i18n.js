@@ -704,6 +704,8 @@ const I18N = {
   sess_snapshot_restored: { pl: 'Snapshot przywrócony', en: 'Snapshot restored' },
   sess_no_snapshots: { pl: 'Brak snapshotów. Zapisz snapshot, aby móc wrócić do tego stanu później.', en: 'No snapshots. Save a snapshot to be able to return to this state later.' },
   loading: { pl: 'Ładowanie', en: 'Loading' },
+  viz_legend_show: { pl: 'Pokaż legendę', en: 'Show legend' },
+  viz_legend_hide: { pl: 'Zwiń legendę', en: 'Hide legend' },
 };
 
 function t(key) {

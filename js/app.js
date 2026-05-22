@@ -872,6 +872,11 @@ async function getCounterProposal() {
         justification = line.split(':').slice(1).join(':').trim();
     }
 
+    // Sanitize AI refusal codes
+    const counterSanitized = sanitizeCode(proposedCode);
+    proposedCode = counterSanitized.code;
+    if (counterSanitized.originalRefusal) justification = `[auto-sanitized from: ${counterSanitized.originalRefusal}] ${justification}`;
+
     resultEl.innerHTML = `
       <div class="counter-comparison">
         <div class="counter-col"><div class="counter-label">${t('coding_your_code')}</div><div class="counter-code">${escapeHtml(code)}</div></div>
@@ -966,6 +971,11 @@ async function getAssistedProposal() {
       if (line.toUpperCase().startsWith('JUSTIFICATION:') || line.toUpperCase().startsWith('UZASADNIENIE:'))
         justification = line.split(':').slice(1).join(':').trim();
     }
+
+    // Sanitize AI refusal codes
+    const assistSanitized = sanitizeCode(proposedCode);
+    proposedCode = assistSanitized.code;
+    if (assistSanitized.originalRefusal) justification = `[auto-sanitized from: ${assistSanitized.originalRefusal}] ${justification}`;
 
     resultEl.innerHTML = `
       <div class="assisted-proposal">
@@ -1160,6 +1170,11 @@ async function runAutoCoding() {
       }
 
       if (!proposedCode) proposedCode = response.trim().split('\n')[0];
+
+      // Sanitize AI refusal codes
+      const sanitized = sanitizeCode(proposedCode);
+      proposedCode = sanitized.code;
+      if (sanitized.originalRefusal) justification = `[auto-sanitized from: ${sanitized.originalRefusal}] ${justification}`;
 
       const record = {
         segment_id: seg.segment_id,
@@ -1715,12 +1730,25 @@ function saveRecord(record, skipPersist) {
   if (!skipPersist) saveSession();
 }
 
-function registerCode(code, type) {
-  if (state.codebook[code]) {
-    state.codebook[code].frequency++;
-  } else {
-    state.codebook[code] = { definition: '', type: type || 'descriptive', frequency: 1, created: new Date().toISOString(), color: '', memo: '', summary: '' };
+// Detect AI refusal codes — sentences instead of short codes
+const _REFUSAL_RE = /^(Nie mogę|Nie jestem w stanie|I cannot|I can't|I'm unable|Unable to|Cannot assign|Brak możliwości|Nie da się|Segment (jest )?za krótki|Segment (is )?too short)/i;
+function sanitizeCode(code) {
+  if (!code || !code.trim()) return { code: '_PUSTY', originalRefusal: null };
+  const trimmed = code.trim();
+  if (trimmed.length > 60 || _REFUSAL_RE.test(trimmed)) {
+    return { code: '_NIEJASNY', originalRefusal: trimmed };
   }
+  return { code: trimmed, originalRefusal: null };
+}
+
+function registerCode(code, type) {
+  const { code: clean, originalRefusal } = sanitizeCode(code);
+  if (state.codebook[clean]) {
+    state.codebook[clean].frequency++;
+  } else {
+    state.codebook[clean] = { definition: '', type: type || 'descriptive', frequency: 1, created: new Date().toISOString(), color: '', memo: originalRefusal ? `[auto-sanitized] ${originalRefusal}` : '', summary: '' };
+  }
+  return clean;
 }
 
 function recalcAllFrequencies() {
@@ -2570,19 +2598,44 @@ function renderCodeDocMatrix() {
     return `<tr><td class="matrix-row-label-num" title="${escapeHtml(code)}">${codeLabels[code]}</td>${cells}</tr>`;
   }).join('');
 
-  const codeLegend = topCodes.map(c => `<div class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</div>`).join('');
-  const fileLegend = files.map(f => `<div class="cooc-legend-item"><strong>${fileLabels[f]}</strong> — ${escapeHtml(f)}</div>`).join('');
+  const codeLegendItems = topCodes.map(c => `<div class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</div>`);
+  const fileLegendItems = files.map(f => `<div class="cooc-legend-item"><strong>${fileLabels[f]}</strong> — ${escapeHtml(f)}</div>`);
 
   return `<h3>${t('viz_code_doc_matrix')}</h3>
     <div class="matrix-wrap"><table class="matrix-table">
       <thead><tr><th></th>${headerCells}</tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="cooc-legend">${fileLegend}</div>
-    <div class="cooc-legend" style="margin-top:0.4rem">${codeLegend}</div>`;
+    ${collapsibleLegend(fileLegendItems)}
+    <div style="margin-top:0.4rem">${collapsibleLegend(codeLegendItems)}</div>`;
 }
 
 // ─── Co-occurrence matrix (proximity-based) ───
+// Helper: collapsible legend (collapses if > threshold items)
+let _legendCounter = 0;
+function collapsibleLegend(items, threshold = 8) {
+  const html = items.join('');
+  if (items.length <= threshold) return `<div class="cooc-legend">${html}</div>`;
+  const id = 'legend_' + (++_legendCounter);
+  return `<div class="cooc-legend cooc-legend-collapsed" id="${id}">
+    <div class="cooc-legend-preview">${items.slice(0, 3).join('')}<span class="cooc-legend-fade"></span></div>
+    <div class="cooc-legend-full" style="display:none">${html}</div>
+    <button class="cooc-legend-toggle" onclick="toggleLegend('${id}')">${t('viz_legend_show')} (${items.length})</button>
+  </div>`;
+}
+function toggleLegend(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const preview = el.querySelector('.cooc-legend-preview');
+  const full = el.querySelector('.cooc-legend-full');
+  const btn = el.querySelector('.cooc-legend-toggle');
+  const isOpen = full.style.display !== 'none';
+  preview.style.display = isOpen ? '' : 'none';
+  full.style.display = isOpen ? 'none' : '';
+  btn.textContent = isOpen ? `${t('viz_legend_show')} (${full.children.length})` : t('viz_legend_hide');
+  el.classList.toggle('cooc-legend-collapsed', isOpen);
+}
+
 function renderCoOccurrenceMatrix() {
   const topCodes = Object.entries(state.codebook).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c]) => c);
   if (topCodes.length < 3) return '';
@@ -2621,7 +2674,7 @@ function renderCoOccurrenceMatrix() {
     return `<tr><td class="matrix-row-label-num" title="${escapeHtml(code)}">${codeLabels[code]}</td>${cells}</tr>`;
   }).join('');
 
-  const legend = topCodes.map(c => `<div class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</div>`).join('');
+  const legendItems = topCodes.map(c => `<div class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</div>`);
 
   return `<h3>${t('viz_cooccurrence')}</h3>
     <p class="matrix-hint">${t('viz_cooccurrence_hint')}</p>
@@ -2629,7 +2682,7 @@ function renderCoOccurrenceMatrix() {
       <thead><tr><th></th>${headerCells}</tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="cooc-legend">${legend}</div>`;
+    ${collapsibleLegend(legendItems)}`;
 }
 
 // ─── Creative coding (visual drag-and-drop grouping) ───

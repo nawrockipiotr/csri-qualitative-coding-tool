@@ -29,6 +29,8 @@ RULES:
 - Highlight a different perspective or aspect of the segment.
 - Use the surrounding context (if provided) to better understand the segment's meaning, but code ONLY the target segment.
 - If your proposal would be identical — say so explicitly.
+- EVERY segment MUST receive a code. Never refuse to code. If the segment is empty or contains only a reference number, use the code "_PUSTY". If the segment is ambiguous or fragmentary but contains some content, use the code "_NIEJASNY". These are valid codes — do NOT write explanations or apologies instead of a code.
+- The CODE field must contain ONLY the code name (max 8 words). Never put a full sentence or explanation in the CODE field.
 - ${langRule(codingLang)}
 - Justification: 1-2 sentences.
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
@@ -45,6 +47,8 @@ function getAssistedProposalPrompt(codingLang, researchQuestion, framework, exis
 RULES:
 - If a codebook/framework is provided — match the segment to an existing code or propose a new one with justification.
 - Use the surrounding context (if provided) to better understand the segment's meaning, but code ONLY the target segment.
+- EVERY segment MUST receive a code. Never refuse to code. If the segment is empty or contains only a reference number, use the code "_PUSTY". If the segment is ambiguous or fragmentary but contains some content, use the code "_NIEJASNY". These are valid codes — do NOT write explanations or apologies instead of a code.
+- The CODE field must contain ONLY the code name (max 8 words). Never put a full sentence or explanation in the CODE field.
 - ${langRule(codingLang)}
 - Justification: 1-2 sentences.
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}
@@ -80,6 +84,8 @@ RULES:
 - Prefer lower-abstraction, empirically grounded codes (first-order concepts).
 - Mark codes derived directly from participant language as in_vivo.
 - Use the surrounding context (if provided) to better understand the segment's meaning, but code ONLY the target segment.
+- EVERY segment MUST receive a code. Never refuse to code. If the segment is empty, contains only a reference number, or is too short to interpret, use the code "_PUSTY". If the segment is ambiguous or fragmentary but contains some content, use the code "_NIEJASNY". These are valid codes — do NOT write explanations or apologies instead of a code.
+- The CODE field must contain ONLY the code name (max 8 words). Never put a full sentence or explanation in the CODE field.
 - ${langRule(codingLang)}
 - Justification: 1 sentence — why this code captures the segment's meaning.
 ${researchQuestion ? `Research question: ${researchQuestion}` : ''}

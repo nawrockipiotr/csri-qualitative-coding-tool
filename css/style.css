@@ -1580,6 +1580,26 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
 }
 .cooc-legend-item { white-space: nowrap; }
 .cooc-legend-item strong { color: var(--text); margin-right: 0.2rem; }
+.cooc-legend-collapsed { position: relative; }
+.cooc-legend-preview { position: relative; }
+.cooc-legend-fade {
+  display: block;
+  height: 1.2rem;
+  background: linear-gradient(transparent, var(--surface1));
+  margin-top: -0.3rem;
+}
+.cooc-legend-toggle {
+  display: block;
+  margin-top: 0.3rem;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+  font-family: inherit;
+}
+.cooc-legend-toggle:hover { text-decoration: underline; }
 /* Legacy class names kept for compatibility */
 .matrix-code-label {
   text-align: left !important;
