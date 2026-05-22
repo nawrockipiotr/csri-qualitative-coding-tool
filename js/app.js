@@ -2434,7 +2434,8 @@ function renderVisualizationView() {
     <h3>${t('viz_freq')}</h3>
     <div class="code-bars">${Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c, i]) => {
       const w = Math.round(i.frequency / totalCoded * 100);
-      return `<div class="bar-row"><span class="bar-label">${escapeHtml(c)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(w, 2)}%"></div></div><span class="bar-count">${i.frequency}</span></div>`;
+      const shortLabel = c.length > 60 ? c.substring(0, 57) + '...' : c;
+      return `<div class="bar-row"><span class="bar-label" title="${escapeHtml(c)}">${escapeHtml(shortLabel)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(w, 2)}%"></div></div><span class="bar-count">${i.frequency}</span></div>`;
     }).join('')}</div>
   `;
   lucide.createIcons();
@@ -2496,7 +2497,11 @@ function renderCoOccurrenceMatrix() {
   }
 
   const maxVal = Math.max(1, ...topCodes.flatMap(c => topCodes.map(c2 => cooccur[c][c2])));
-  const headerCells = topCodes.map(c => `<th class="matrix-col-header" title="${escapeHtml(c)}"><span>${escapeHtml(c)}</span></th>`).join('');
+  // Numeric labels for column headers (K1, K2, ...)
+  const codeLabels = {};
+  topCodes.forEach((c, idx) => { codeLabels[c] = 'K' + (idx + 1); });
+
+  const headerCells = topCodes.map(c => `<th class="matrix-col-header-num" title="${escapeHtml(c)}">${codeLabels[c]}</th>`).join('');
   const rows = topCodes.map(code => {
     const cells = topCodes.map(c2 => {
       if (code === c2) return '<td class="matrix-cell matrix-diag"></td>';
@@ -2505,15 +2510,18 @@ function renderCoOccurrenceMatrix() {
       const bg = v ? `rgba(234,88,12,${0.15 + intensity * 0.7})` : '';
       return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${escapeHtml(code)} ↔ ${escapeHtml(c2)}: ${v}">${v || ''}</td>`;
     }).join('');
-    return `<tr><td class="matrix-row-label">${escapeHtml(code)}</td>${cells}</tr>`;
+    return `<tr><td class="matrix-row-label-short" title="${escapeHtml(code)}">${codeLabels[code]} ${escapeHtml(code.length > 50 ? code.substring(0, 47) + '...' : code)}</td>${cells}</tr>`;
   }).join('');
+
+  const legend = topCodes.map(c => `<span class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</span>`).join('');
 
   return `<h3>${t('viz_cooccurrence')}</h3>
     <p class="matrix-hint">${t('viz_cooccurrence_hint')}</p>
     <div class="matrix-wrap"><table class="matrix-table">
       <thead><tr><th></th>${headerCells}</tr></thead>
       <tbody>${rows}</tbody>
-    </table></div>`;
+    </table></div>
+    <div class="cooc-legend">${legend}</div>`;
 }
 
 // ─── Creative coding (visual drag-and-drop grouping) ───

@@ -848,7 +848,7 @@ h1 {
 /* Frequency bars */
 .code-bars { display: flex; flex-direction: column; gap: 0.3rem; }
 .bar-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
-.bar-label { min-width: 180px; max-width: 350px; text-align: right; color: var(--text-dim); word-break: break-word; white-space: normal; line-height: 1.3; }
+.bar-label { width: 280px; flex-shrink: 0; text-align: right; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
 .bar-track { flex: 1; height: 18px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--accent-teal); border-radius: 4px; transition: width 0.3s; }
 .bar-count { width: 30px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
@@ -1521,6 +1521,40 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   max-height: 155px;
   padding: 0.2rem;
 }
+/* Co-occurrence: numeric column headers */
+.matrix-col-header-num {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 0.3rem 0.2rem !important;
+  cursor: default;
+  white-space: nowrap;
+}
+.matrix-row-label-short {
+  text-align: left !important;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem !important;
+  cursor: default;
+}
+.cooc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--surface1);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+.cooc-legend-item { white-space: nowrap; }
+.cooc-legend-item strong { color: var(--text); margin-right: 0.2rem; }
 /* Legacy class names kept for compatibility */
 .matrix-code-label {
   text-align: left !important;
@@ -1694,5 +1728,6 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .counter-comparison { grid-template-columns: 1fr; }
   .params-row { grid-template-columns: 1fr; }
-  .bar-label { min-width: 100px; max-width: 200px; }
+  .bar-label { width: 140px; }
+  .matrix-row-label-short { max-width: 180px; }
 }
