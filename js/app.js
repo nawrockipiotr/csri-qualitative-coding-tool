@@ -2510,10 +2510,10 @@ function renderCoOccurrenceMatrix() {
       const bg = v ? `rgba(234,88,12,${0.15 + intensity * 0.7})` : '';
       return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${escapeHtml(code)} ↔ ${escapeHtml(c2)}: ${v}">${v || ''}</td>`;
     }).join('');
-    return `<tr><td class="matrix-row-label-short" title="${escapeHtml(code)}">${codeLabels[code]} ${escapeHtml(code.length > 50 ? code.substring(0, 47) + '...' : code)}</td>${cells}</tr>`;
+    return `<tr><td class="matrix-row-label-num" title="${escapeHtml(code)}">${codeLabels[code]}</td>${cells}</tr>`;
   }).join('');
 
-  const legend = topCodes.map(c => `<span class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</span>`).join('');
+  const legend = topCodes.map(c => `<div class="cooc-legend-item"><strong>${codeLabels[c]}</strong> — ${escapeHtml(c)}</div>`).join('');
 
   return `<h3>${t('viz_cooccurrence')}</h3>
     <p class="matrix-hint">${t('viz_cooccurrence_hint')}</p>

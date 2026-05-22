@@ -1531,6 +1531,15 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
   cursor: default;
   white-space: nowrap;
 }
+.matrix-row-label-num {
+  text-align: center !important;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding: 0.3rem 0.4rem !important;
+  cursor: default;
+}
 .matrix-row-label-short {
   text-align: left !important;
   font-weight: 500;
@@ -1544,8 +1553,8 @@ input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-teal); ou
 }
 .cooc-legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.2rem;
+  flex-direction: column;
+  gap: 0.25rem;
   margin-top: 0.75rem;
   padding: 0.75rem;
   background: var(--surface1);
