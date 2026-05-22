@@ -71,49 +71,49 @@
 
     <!-- Info panels -->
     <div class="info-panel" id="infoGioia">
-      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_gioia_text">Trzypoziomowa struktura analizy jakościowej opracowana przez Dennisa Gioię. Dane empiryczne są stopniowo abstrahowane: surowe fragmenty tekstu → kody (first-order concepts) → tematy (second-order themes) → wymiary (aggregate dimensions). Celem jest zbudowanie data structure łączącej głos informatorów z interpretacją teoretyczną badacza. Narzędzie wspiera pełen cykl: kodowanie, grupowanie w tematy, generowanie wymiarów z uzasadnieniem, tabelę Gioia i eksport.</div></div>
     </div>
     <div class="info-panel" id="infoCodes">
-      <div class="info-box"><div class="info-content" data-i18n="info_codes_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_codes_text">First-order concepts — etykiety nadawane bezpośrednio fragmentom danych, bliskie językowi informatorów. Docelowo 15–25 kodów w projekcie. Każdy kod może mieć memo analityczne (notatka badacza), kolor i oznaczenie in-vivo (dosłowny cytat). Kody są podstawą do budowania tematów wyższego rzędu. W narzędziu: nadajesz kody w widoku kodowania, zarządzasz nimi w zakładce Codebook (merge, rename, delete, split).</div></div>
     </div>
     <div class="info-panel" id="infoThemes">
-      <div class="info-box"><div class="info-content" data-i18n="info_themes_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_themes_text">Second-order themes — kategorie teoretyczne grupujące 2–6 kodów na wyższym poziomie abstrakcji. Każdy temat powinien mieć jasną etykietę interpretacyjną (nie parafrazę kodów). Tematy można generować ręcznie lub z pomocą AI (wieloprzebiegowo: propozycja → krytyka → rewizja). W narzędziu: generujesz tematy w zakładce Codebook przyciskiem „Wygeneruj tematy (AI)" lub budujesz je ręcznie w Creative Coding (drag & drop kodów na płótnie).</div></div>
     </div>
     <div class="info-panel" id="infoDimensions">
-      <div class="info-box"><div class="info-content" data-i18n="info_dimensions_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_dimensions_text">Aggregate dimensions — najwyższy poziom abstrakcji w strukturze Gioia (docelowo 2–4). Każdy wymiar grupuje tematy 2nd-order i wymaga uzasadnienia teoretycznego: dlaczego te tematy tworzą spójną całość, jaka teoria lub mechanizm za tym stoi. W narzędziu: generujesz wymiary przyciskiem „Wygeneruj wymiary (AI)" w zakładce Codebook. Każdy wymiar otrzymuje uzasadnienie z odwołaniem do teorii/autora, które możesz edytować.</div></div>
     </div>
     <div class="info-panel" id="infoCreative">
-      <div class="info-box"><div class="info-content" data-i18n="info_creative_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_creative_text">Wizualne grupowanie kodów w tematy metodą drag & drop na interaktywnym płótnie. Kody wyświetlane jako karty, które przeciągasz do stref tematycznych. Pozwala eksperymentować z różnymi konfiguracjami tematów bez trwałych zmian — zatwierdzasz dopiero, gdy układ Ci odpowiada. Dostępne w zakładce Codebook po wygenerowaniu lub ręcznym utworzeniu tematów.</div></div>
     </div>
     <div class="info-panel" id="infoAbduction">
-      <div class="info-box"><div class="info-content" data-i18n="info_abduction_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_abduction_text">Re-kodowanie danych w świetle wygenerowanych tematów. Po pierwszym cyklu kodowania i tematyzacji narzędzie (w trybie automatycznym) ponownie przechodzi przez segmenty, sprawdzając, czy kody nadane wcześniej pasują do struktury tematycznej, czy wymagają korekty. Realizuje postulat abdukcji: iteracyjne przechodzenie między danymi a teorią. Diagnostyka pętli pokazuje, ile kodów zostało zmienionych i na jakie.</div></div>
     </div>
     <div class="info-panel" id="infoGrounding">
-      <div class="info-box"><div class="info-content" data-i18n="info_grounding_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_grounding_text">Tabela łącząca każdy wymiar z argumentem teoretycznym — teoria/autor + uzasadnienie, dlaczego dany zestaw tematów tworzy spójny wymiar. Edytowalna: możesz zmienić teorię, autora i treść uzasadnienia. Generowana automatycznie razem z wymiarami lub dodawana ręcznie. Widoczna w zakładce Codebook w sekcji wymiarów oraz w eksportowanym raporcie.</div></div>
     </div>
     <div class="info-panel" id="infoViz">
-      <div class="info-box"><div class="info-content" data-i18n="info_viz_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_viz_text">Zakładka Visualization zawiera: częstość kodów (wykres słupkowy), macierz współwystępowania kodów (które kody pojawiają się razem w tym samym segmencie), macierz kod × dokument (rozkład kodów w poszczególnych plikach źródłowych — wymaga ≥2 plików), diagnostyki (ostrzeżenia drift, brama saturacji), tabelę Gioia (podgląd pełnej struktury) i pętlę abdukcyjną. Macierze używają skróconych etykiet (K1, K2, D1, D2) z legendą poniżej.</div></div>
     </div>
     <div class="info-panel" id="infoInductive">
-      <div class="info-box"><div class="info-content" data-i18n="info_inductive_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_inductive_text">Badacz koduje samodzielnie. Pełna kontrola nad procesem — AI nie ingeruje. Nawigacja: ← → (skróty klawiszowe), cofanie: Ctrl+Z. Sugerowany jako punkt wyjścia, zwłaszcza dla doświadczonych koderów.</div></div>
     </div>
     <div class="info-panel" id="infoCounter">
-      <div class="info-box"><div class="info-content" data-i18n="info_counter_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_counter_text">Badacz najpierw nadaje własny kod, potem AI proponuje alternatywę. Decyzja zawsze po stronie badacza: mój kod, propozycja AI, lub zmodyfikowany. Wymusza refleksję nad własnymi wyborami.</div></div>
     </div>
     <div class="info-panel" id="infoAssisted">
-      <div class="info-box"><div class="info-content" data-i18n="info_assisted_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_assisted_text">AI proponuje kod dla każdego segmentu. Badacz akceptuje, modyfikuje lub odrzuca. Przydatne przy dużych zbiorach danych lub kodowaniu dedukcyjnym z ramą pojęciową.</div></div>
     </div>
     <div class="info-panel" id="infoAuto">
-      <div class="info-box"><div class="info-content" data-i18n="info_auto_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_auto_text">Pełny pipeline automatyczny w 5 fazach: (1) kodowanie z oknem kontekstowym (AI widzi sąsiednie segmenty), (2) constant comparison co N segmentów — batch size konfigurowalny w parametrach (domyślnie 10), (3) wieloprzebiegowe tematy (generowanie → krytyka → rewizja, temperature=0 dla powtarzalności), (4) pętla abdukcyjna (re-kodowanie w świetle tematów), (5) wymiary z uzasadnieniem teoretycznym. Brama saturacji ostrzega, gdy nowe kody pojawiają się zbyt szybko. Przed startem wyświetlana jest analiza wstępna danych z sugestiami konfiguracji. Badacz koryguje wyniki w tabeli przeglądu — cofanie zmian przez Ctrl+Z.</div></div>
     </div>
     <div class="info-panel" id="infoImport">
-      <div class="info-box"><div class="info-content" data-i18n="info_import_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_import_text">Przeciągnij pliki (TXT, JSON, CSV, DOCX) lub wklej tekst. Wiele plików tworzy wspólną pulę segmentów — każdy segment zachowuje oznaczenie pliku źródłowego. TXT: auto-detekcja tur mówców (Imię: tekst) lub podział na akapity. JSON: natywny format QCT lub dowolna tablica obiektów. CSV: automatyczne rozpoznanie kolumn (text/author/id). DOCX: ekstrakcja tekstu, segmentacja jak TXT. Przy imporcie do istniejącej sesji wybierasz: dodaj do puli (merge) lub zastąp.</div></div>
     </div>
     <div class="info-panel" id="infoExport">
-      <div class="info-box"><div class="info-content" data-i18n="info_export_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_export_text">JSON (pełny eksport z metadanymi, memo, kolorami kodów), CSV (kompatybilny z MAXQDA/NVivo), tabela Gioia (Markdown), raport kodowania (statystyki i ostrzeżenia), REFI-QDA (.qdpx — standard wymiany z MAXQDA, NVivo, ATLAS.ti). Eksport codebooka (CSV) dostępny w zakładce Codebook. Szybki eksport kodowań (CSV/JSON) dostępny bezpośrednio z widoku kodowania. JSON jest kanonicznym formatem wymiany z pluginem Claude.</div></div>
     </div>
     <div class="info-panel" id="infoSession">
-      <div class="info-box"><div class="info-content" data-i18n="info_session_text"></div></div>
+      <div class="info-box"><div class="info-content" data-i18n="info_session_text">Cała sesja kodowania jest automatycznie zapisywana w localStorage przeglądarki po każdej operacji (nadanie kodu, edycja, konsolidacja, generowanie tematów). Jeśli zamkniesz przeglądarkę lub kartę — po ponownym otwarciu narzędzie wczyta ostatni stan. Limit localStorage to ok. 5 MB; przy dużych zbiorach narzędzie ostrzeże, gdy dane przekroczą 4 MB. Zalecenie: regularnie eksportuj sesję do JSON jako kopię zapasową — localStorage może zostać wyczyszczone przez przeglądarkę.</div></div>
     </div>
 
     <div class="hero-author">Qualitative Coding Tool · by Piotr Nawrocki</div>
@@ -174,6 +174,7 @@
     <button class="nav-btn" data-view="codebook" onclick="showView('codebook')" data-i18n="nav_codebook">Codebook</button>
     <button class="nav-btn" data-view="visualization" onclick="showView('visualization')" data-i18n="nav_visualization">Wizualizacja</button>
     <button class="nav-btn" data-view="export" onclick="showView('export')" data-i18n="nav_export">Eksport</button>
+    <button class="nav-btn" data-view="sessions" onclick="showView('sessions')" data-i18n="nav_sessions">Sesje</button>
   </div>
 
   <!-- ═══ SETUP ═══ -->
@@ -332,12 +333,17 @@
     <div class="empty-state" data-i18n="empty_export">Brak danych do eksportu.</div>
   </div>
 
+  <div id="view-sessions" class="view-panel">
+    <div id="sessionsContent"></div>
+  </div>
+
 </div>
 
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="js/i18n.js"></script>
+<script src="js/session-manager.js"></script>
 <script src="js/prompts.js"></script>
 <script src="js/api.js"></script>
 <script src="js/export.js"></script>

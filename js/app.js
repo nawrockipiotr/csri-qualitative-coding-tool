@@ -223,6 +223,7 @@ function showView(view) {
   if (view === 'codebook') renderCodebookView();
   if (view === 'visualization') renderVisualizationView();
   if (view === 'export') renderExportView();
+  if (view === 'sessions') renderSessionsView();
 }
 
 // ─── Setup / Import ───
@@ -641,6 +642,16 @@ function confirmSetup() {
   state.sourceType = document.getElementById('sourceType').value;
   state.configured = true;
   state.currentIdx = 0;
+
+  // Create IndexedDB session if none active
+  if (!activeSessionId) {
+    const rq = state.researchQuestion || '';
+    const name = rq.length > 40 ? rq.slice(0, 40) + '…' : (rq || 'Sesja ' + new Date().toLocaleDateString('pl'));
+    SessionManager.createSession(name).then(s => {
+      activeSessionId = s.id;
+      saveSession();
+    }).catch(() => {});
+  }
 
   saveSession();
   showView('coding');
@@ -2749,22 +2760,25 @@ function renderExportView() {
   lucide.createIcons();
 }
 
-// ─── Session persistence ───
+// ─── Session persistence (IndexedDB + localStorage fallback) ───
+let activeSessionId = null;
+
 function saveSession() {
+  // Always save to localStorage as fallback
   try {
     const json = JSON.stringify(state);
     localStorage.setItem('coding_tool_session', json);
-    // Warn if approaching localStorage limit (~5MB)
-    if (json.length > 4 * 1024 * 1024) {
-      console.warn('Session data exceeds 4MB — consider exporting a backup (JSON).');
-    }
-  } catch (e) {
-    showError(t('save_quota_error'));
-    console.error('localStorage quota exceeded:', e);
+  } catch (e) { /* quota */ }
+  // Save to IndexedDB if we have an active session
+  if (activeSessionId) {
+    SessionManager.saveSession(activeSessionId, null, state).catch(e => {
+      console.warn('IndexedDB save failed:', e);
+    });
   }
 }
 
 function loadSession() {
+  // Try localStorage first (synchronous, for init)
   try {
     const saved = localStorage.getItem('coding_tool_session');
     if (saved) {
@@ -2774,6 +2788,245 @@ function loadSession() {
     }
   } catch (e) { /* corrupt */ }
   return false;
+}
+
+// Async load from IndexedDB (called after DOM ready)
+async function loadSessionAsync() {
+  try {
+    await SessionManager.open();
+    // Check if we need to migrate from localStorage
+    const sessions = await SessionManager.listSessions();
+    if (sessions.length === 0 && localStorage.getItem('coding_tool_session') && !localStorage.getItem('qct_state_migrated')) {
+      // Migrate existing localStorage session
+      const migrated = await SessionManager.migrateFromLocalStorage();
+      if (migrated) {
+        activeSessionId = migrated.id;
+        return;
+      }
+    }
+    // Load active session
+    const aid = await SessionManager.getActiveSessionId();
+    if (aid) {
+      const session = await SessionManager.getSession(aid);
+      if (session) {
+        activeSessionId = aid;
+        Object.assign(state, session.data);
+      }
+    } else if (sessions.length > 0) {
+      // Use most recent session
+      activeSessionId = sessions[0].id;
+      Object.assign(state, sessions[0].data);
+      await SessionManager.setActiveSessionId(activeSessionId);
+    }
+  } catch (e) {
+    console.warn('IndexedDB load failed, using localStorage:', e);
+  }
+}
+
+// ─── Sessions view ───
+async function renderSessionsView() {
+  const el = document.getElementById('sessionsContent');
+  if (!el) return;
+  el.innerHTML = `<div class="loading-spinner">${t('loading')}...</div>`;
+
+  try {
+    const sessions = await SessionManager.listSessions();
+    const snapshots = activeSessionId ? await SessionManager.listSnapshots(activeSessionId) : [];
+    const storage = await SessionManager.getStorageEstimate();
+
+    let html = `<div class="sessions-panel">`;
+
+    // ── Header + new session button ──
+    html += `<div class="sessions-header">
+      <h3><i data-lucide="database" class="icon-sm"></i> ${t('sess_title')}</h3>
+      <div class="sessions-header-actions">
+        <button class="btn-sm btn-primary" onclick="sessNewSession()"><i data-lucide="plus" class="icon-sm"></i> ${t('sess_new')}</button>
+        <label class="btn-sm btn-secondary" style="cursor:pointer"><i data-lucide="upload" class="icon-sm"></i> ${t('sess_import')}
+          <input type="file" accept=".json" style="display:none" onchange="sessImportFile(event)">
+        </label>
+      </div>
+    </div>`;
+
+    // ── Storage info ──
+    if (storage) {
+      const usedMB = (storage.used / 1024 / 1024).toFixed(1);
+      html += `<div class="sessions-storage">${t('sess_storage')}: ${usedMB} MB (${storage.percent}%)</div>`;
+    }
+
+    // ── Sessions list ──
+    if (sessions.length === 0) {
+      html += `<div class="empty-state">${t('sess_empty')}</div>`;
+    } else {
+      html += `<div class="sessions-list">`;
+      for (const s of sessions) {
+        const isActive = s.id === activeSessionId;
+        const date = new Date(s.updatedAt).toLocaleString(currentLang);
+        html += `<div class="session-card ${isActive ? 'session-active' : ''}">
+          <div class="session-card-main">
+            <div class="session-card-name">
+              ${isActive ? '<i data-lucide="check-circle" class="icon-sm session-active-icon"></i>' : ''}
+              <strong>${escapeHtml(s.name)}</strong>
+            </div>
+            <div class="session-card-meta">
+              ${s.segmentCount || 0} ${t('sess_segments')} · ${s.codeCount || 0} ${t('sess_codes')} · ${date}
+            </div>
+          </div>
+          <div class="session-card-actions">
+            ${!isActive ? `<button class="btn-xs btn-primary" onclick="sessSwitchTo('${s.id}')" title="${t('sess_switch')}"><i data-lucide="log-in" class="icon-sm"></i></button>` : ''}
+            <button class="btn-xs" onclick="sessRename('${s.id}', '${escapeHtml(s.name)}')" title="${t('sess_rename')}"><i data-lucide="pencil" class="icon-sm"></i></button>
+            <button class="btn-xs" onclick="sessDuplicate('${s.id}')" title="${t('sess_duplicate')}"><i data-lucide="copy" class="icon-sm"></i></button>
+            <button class="btn-xs" onclick="sessExport('${s.id}')" title="${t('sess_export')}"><i data-lucide="download" class="icon-sm"></i></button>
+            ${!isActive ? `<button class="btn-xs btn-danger" onclick="sessDelete('${s.id}')" title="${t('sess_delete')}"><i data-lucide="trash-2" class="icon-sm"></i></button>` : ''}
+          </div>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+
+    // ── Snapshots section ──
+    if (activeSessionId) {
+      html += `<div class="sessions-snapshots">
+        <div class="sessions-header" style="margin-top:1.5rem">
+          <h3><i data-lucide="history" class="icon-sm"></i> ${t('sess_snapshots')}</h3>
+          <button class="btn-sm btn-secondary" onclick="sessCreateSnapshot()"><i data-lucide="camera" class="icon-sm"></i> ${t('sess_snapshot_create')}</button>
+        </div>`;
+      if (snapshots.length === 0) {
+        html += `<div class="empty-state">${t('sess_no_snapshots')}</div>`;
+      } else {
+        html += `<div class="sessions-list">`;
+        for (const snap of snapshots) {
+          const date = new Date(snap.createdAt).toLocaleString(currentLang);
+          html += `<div class="session-card session-snap">
+            <div class="session-card-main">
+              <div class="session-card-name"><strong>${escapeHtml(snap.label)}</strong></div>
+              <div class="session-card-meta">${snap.segmentCount || 0} ${t('sess_segments')} · ${snap.codeCount || 0} ${t('sess_codes')} · ${date}</div>
+            </div>
+            <div class="session-card-actions">
+              <button class="btn-xs btn-primary" onclick="sessRestoreSnapshot('${snap.id}')" title="${t('sess_snapshot_restore')}"><i data-lucide="undo-2" class="icon-sm"></i></button>
+              <button class="btn-xs btn-danger" onclick="sessDeleteSnapshot('${snap.id}')" title="${t('sess_delete')}"><i data-lucide="trash-2" class="icon-sm"></i></button>
+            </div>
+          </div>`;
+        }
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    el.innerHTML = html;
+    lucide.createIcons({ node: el });
+  } catch (e) {
+    el.innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+    console.error('renderSessionsView:', e);
+  }
+}
+
+// ── Session actions ──
+async function sessNewSession() {
+  // Save current session first
+  saveSession();
+  const name = prompt(t('sess_name_prompt'), 'Nowa sesja');
+  if (!name) return;
+  const session = await SessionManager.createSession(name);
+  activeSessionId = session.id;
+  // Reset state
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, session.data);
+  undoStack.length = 0;
+  showView('sessions');
+  showStatus(t('sess_created'));
+}
+
+async function sessSwitchTo(id) {
+  // Save current session first
+  saveSession();
+  const session = await SessionManager.getSession(id);
+  if (!session) return;
+  activeSessionId = id;
+  await SessionManager.setActiveSessionId(id);
+  // Load new state
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {}, memos: {}, projectMemo: '' }, session.data);
+  // Also update localStorage
+  try { localStorage.setItem('coding_tool_session', JSON.stringify(state)); } catch(e) {}
+  undoStack.length = 0;
+  showView('sessions');
+  showStatus(t('sess_switched') + ': ' + session.name);
+}
+
+async function sessRename(id, currentName) {
+  const name = prompt(t('sess_rename_prompt'), currentName);
+  if (!name || name === currentName) return;
+  await SessionManager.renameSession(id, name);
+  renderSessionsView();
+}
+
+async function sessDuplicate(id) {
+  const s = await SessionManager.getSession(id);
+  if (!s) return;
+  await SessionManager.duplicateSession(id, s.name + ' (kopia)');
+  renderSessionsView();
+  showStatus(t('sess_duplicated'));
+}
+
+async function sessExport(id) {
+  const data = await SessionManager.exportSession(id);
+  if (!data) return;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `qct-session-${data.name.replace(/\s+/g, '-')}.json`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+async function sessDelete(id) {
+  if (!safeConfirm(t('sess_delete_confirm'))) return;
+  await SessionManager.deleteSession(id);
+  renderSessionsView();
+}
+
+async function sessImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const json = JSON.parse(text);
+    const name = file.name.replace(/\.json$/i, '').replace(/^qct-session-/, '');
+    await SessionManager.importSession(json, name);
+    renderSessionsView();
+    showStatus(t('sess_imported'));
+  } catch (e) {
+    showError(t('sess_import_error') + ': ' + e.message);
+  }
+  event.target.value = '';
+}
+
+async function sessCreateSnapshot() {
+  if (!activeSessionId) return;
+  saveSession(); // Ensure latest state is saved
+  const label = prompt(t('sess_snapshot_label'), new Date().toLocaleString(currentLang));
+  if (!label) return;
+  await SessionManager.createSnapshot(activeSessionId, label);
+  renderSessionsView();
+  showStatus(t('sess_snapshot_saved'));
+}
+
+async function sessRestoreSnapshot(snapId) {
+  if (!safeConfirm(t('sess_snapshot_restore_confirm'))) return;
+  const session = await SessionManager.restoreSnapshot(snapId);
+  if (!session) return;
+  Object.keys(state).forEach(k => delete state[k]);
+  Object.assign(state, { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {}, memos: {}, projectMemo: '' }, session.data);
+  try { localStorage.setItem('coding_tool_session', JSON.stringify(state)); } catch(e) {}
+  undoStack.length = 0;
+  renderSessionsView();
+  showStatus(t('sess_snapshot_restored'));
+}
+
+async function sessDeleteSnapshot(snapId) {
+  if (!safeConfirm(t('sess_delete_confirm'))) return;
+  await SessionManager.deleteSnapshot(snapId);
+  renderSessionsView();
 }
 
 // ─── Helpers ───
@@ -2801,6 +3054,14 @@ function showError(msg) {
     const bar = document.getElementById('sessionBar');
     if (bar) bar.style.display = '';
   }
+  // Async IndexedDB init (non-blocking)
+  loadSessionAsync().then(() => {
+    // If IndexedDB had a newer session, re-render
+    if (activeSessionId && state.configured) {
+      const bar = document.getElementById('sessionBar');
+      if (bar) bar.style.display = '';
+    }
+  }).catch(e => console.warn('IndexedDB init:', e));
 })();
 
 function restoreSession() {
@@ -2833,6 +3094,7 @@ function dismissSession() {
   document.getElementById('sessionBar').style.display = 'none';
   state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {}, memos: {}, projectMemo: '' };
   localStorage.removeItem('coding_tool_session');
+  activeSessionId = null;
 }
 
 function resetSession() {

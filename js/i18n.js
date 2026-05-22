@@ -145,6 +145,7 @@ const I18N = {
   nav_codebook: { pl: 'Codebook', en: 'Codebook' },
   nav_visualization: { pl: 'Wizualizacja', en: 'Visualization' },
   nav_export: { pl: 'Eksport', en: 'Export' },
+  nav_sessions: { pl: 'Sesje', en: 'Sessions' },
 
   // Setup
   setup_source_data: { pl: 'Dane źródłowe', en: 'Source data' },
@@ -672,6 +673,37 @@ const I18N = {
   export_gioia_svg: { pl: 'Tabela Gioia (SVG)', en: 'Gioia Table (SVG)' },
   export_viz_done: { pl: 'Raport HTML wygenerowany.', en: 'HTML report generated.' },
   export_svg_done: { pl: 'Tabela Gioia SVG wygenerowana.', en: 'Gioia table SVG generated.' },
+
+  // Session manager
+  sess_title: { pl: 'Menedżer sesji', en: 'Session manager' },
+  sess_new: { pl: 'Nowa sesja', en: 'New session' },
+  sess_import: { pl: 'Importuj', en: 'Import' },
+  sess_storage: { pl: 'Zajętość', en: 'Storage used' },
+  sess_empty: { pl: 'Brak zapisanych sesji. Rozpocznij kodowanie — sesja zapisze się automatycznie.', en: 'No saved sessions. Start coding — the session will save automatically.' },
+  sess_segments: { pl: 'segm.', en: 'seg.' },
+  sess_codes: { pl: 'kodów', en: 'codes' },
+  sess_switch: { pl: 'Przełącz na tę sesję', en: 'Switch to this session' },
+  sess_rename: { pl: 'Zmień nazwę', en: 'Rename' },
+  sess_duplicate: { pl: 'Duplikuj', en: 'Duplicate' },
+  sess_export: { pl: 'Eksportuj', en: 'Export' },
+  sess_delete: { pl: 'Usuń', en: 'Delete' },
+  sess_delete_confirm: { pl: 'Na pewno usunąć tę sesję? Operacja nieodwracalna.', en: 'Delete this session permanently?' },
+  sess_name_prompt: { pl: 'Nazwa nowej sesji:', en: 'New session name:' },
+  sess_rename_prompt: { pl: 'Nowa nazwa sesji:', en: 'New session name:' },
+  sess_created: { pl: 'Utworzono nową sesję', en: 'New session created' },
+  sess_switched: { pl: 'Przełączono na sesję', en: 'Switched to session' },
+  sess_duplicated: { pl: 'Sesja zduplikowana', en: 'Session duplicated' },
+  sess_imported: { pl: 'Sesja zaimportowana', en: 'Session imported' },
+  sess_import_error: { pl: 'Błąd importu', en: 'Import error' },
+  sess_snapshots: { pl: 'Snapshoty (historia wersji)', en: 'Snapshots (version history)' },
+  sess_snapshot_create: { pl: 'Zapisz snapshot', en: 'Save snapshot' },
+  sess_snapshot_label: { pl: 'Etykieta snapshotu:', en: 'Snapshot label:' },
+  sess_snapshot_saved: { pl: 'Snapshot zapisany', en: 'Snapshot saved' },
+  sess_snapshot_restore: { pl: 'Przywróć ten snapshot', en: 'Restore this snapshot' },
+  sess_snapshot_restore_confirm: { pl: 'Przywrócić ten snapshot? Aktualny stan zostanie zapisany jako osobny snapshot.', en: 'Restore this snapshot? Current state will be saved as a separate snapshot first.' },
+  sess_snapshot_restored: { pl: 'Snapshot przywrócony', en: 'Snapshot restored' },
+  sess_no_snapshots: { pl: 'Brak snapshotów. Zapisz snapshot, aby móc wrócić do tego stanu później.', en: 'No snapshots. Save a snapshot to be able to return to this state later.' },
+  loading: { pl: 'Ładowanie', en: 'Loading' },
 };
 
 function t(key) {
@@ -720,5 +752,5 @@ function toggleLang() {
 
 // Apply saved language on page load (after DOM is ready)
 document.addEventListener('DOMContentLoaded', () => {
-  if (currentLang !== 'pl') setLang(currentLang);
+  setLang(currentLang);
 });
