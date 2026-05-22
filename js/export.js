@@ -32,6 +32,9 @@ function exportJSON() {
         definition: info.definition || '',
         type: info.type,
         frequency: info.frequency,
+        color: info.color || '',
+        memo: info.memo || '',
+        summary: info.summary || '',
         inclusion_rule: '',
         exclusion_rule: '',
         anchor_example: ''
@@ -39,6 +42,8 @@ function exportJSON() {
     ),
     second_order_themes: state.themes,
     aggregate_dimensions: state.dimensions,
+    memos: state.memos || {},
+    project_memo: state.projectMemo || '',
     segments: state.codedRecords
   };
 
@@ -149,6 +154,101 @@ ${(() => {
 
   downloadFile(report, `coding_report_${ts()}.txt`, 'text/plain');
   document.getElementById('exportPreview')?.innerHTML = `<pre class="export-preview">${escapeHtml(report)}</pre>`;
+}
+
+function exportREFI_QDA() {
+  if (typeof JSZip === 'undefined') {
+    document.getElementById('exportPreview')?.textContent = t('export_refi_no_jszip');
+    return;
+  }
+
+  const guid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+
+  const projGuid = guid();
+  const userGuid = guid();
+  const now = new Date().toISOString();
+
+  // Build code GUIDs
+  const codeGuids = {};
+  for (const code of Object.keys(state.codebook)) {
+    codeGuids[code] = guid();
+  }
+
+  // Build source GUIDs
+  const sources = [...new Set(state.segments.map(s => s.source_file || 'data').filter(Boolean))];
+  const sourceGuids = {};
+  sources.forEach(s => sourceGuids[s] = guid());
+
+  // XML escape
+  const xe = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Build codes XML
+  const codesXml = Object.entries(state.codebook).map(([code, info]) => {
+    const color = info.color ? ` color="${xe(info.color)}"` : '';
+    return `    <Code guid="${codeGuids[code]}" name="${xe(code)}" isCodable="true"${color}>
+      <Description>${xe(info.definition || '')}</Description>
+    </Code>`;
+  }).join('\n');
+
+  // Build sources XML
+  const sourcesXml = sources.map(s =>
+    `    <TextSource guid="${sourceGuids[s]}" name="${xe(s)}" plainTextPath="sources/${xe(s)}.txt" />`
+  ).join('\n');
+
+  // Build codings XML (selections)
+  const codingsXml = state.codedRecords.map(r => {
+    const codeGuid = codeGuids[r.first_order_code];
+    if (!codeGuid) return '';
+    const srcFile = r.source_file || 'data';
+    const srcGuid = sourceGuids[srcFile];
+    if (!srcGuid) return '';
+    return `    <Coding guid="${guid()}" codeGUID="${codeGuid}" codingSourceGUID="${srcGuid}">
+      <PlainTextSelection startPosition="0" endPosition="${r.text_primary.length}" />
+    </Coding>`;
+  }).filter(Boolean).join('\n');
+
+  const projectXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Project name="QCT Export" origin="QualitativeCodingTool/${TOOL_VERSION}"
+  xmlns="urn:QDA-XML:project:1.0"
+  creatingUserGUID="${userGuid}"
+  creationDateTime="${now}">
+  <Users>
+    <User guid="${userGuid}" name="${xe(state.coderId || 'researcher')}" />
+  </Users>
+  <CodeBook>
+${codesXml}
+  </CodeBook>
+  <Sources>
+${sourcesXml}
+  </Sources>
+  <Codings>
+${codingsXml}
+  </Codings>
+</Project>`;
+
+  const zip = new JSZip();
+  zip.file('project.qde', projectXml);
+
+  // Add plain text sources
+  const srcFolder = zip.folder('sources');
+  for (const src of sources) {
+    const segs = state.segments.filter(s => (s.source_file || 'data') === src);
+    const text = segs.map(s => s.text_primary).join('\n\n');
+    srcFolder.file(src + '.txt', text);
+  }
+
+  zip.generateAsync({ type: 'blob' }).then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `coding_export_${ts()}.qdpx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    document.getElementById('exportPreview')?.textContent = t('export_refi_done');
+  });
 }
 
 // ─── Helpers ───

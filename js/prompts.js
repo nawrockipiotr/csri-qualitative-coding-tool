@@ -243,6 +243,27 @@ AUTHOR: [key author(s) and year, e.g. Eisenhardt (1989), Gioia et al. (2013)]
 GROUNDING: [1-2 sentences — how this dimension maps onto the cited theory/construct and why the connection is warranted]`;
 }
 
+// ─── Ask AI about a code (code-level analysis) ───
+function getAskCodePrompt(codingLang, researchQuestion, code) {
+  return `You are a qualitative coding expert. The researcher asks you to analyze a specific first-order code and the segments assigned to it.
+
+TASK:
+1. Summarize what this code captures — the core phenomenon or pattern across all segments.
+2. Assess internal consistency — do all segments genuinely belong under this code, or are some mismatches?
+3. Suggest whether the code name accurately reflects the content, or propose a better name.
+4. Note any sub-patterns that might warrant splitting the code into two.
+
+- ${langRule(codingLang)}
+${researchQuestion ? `Research question: ${researchQuestion}` : ''}
+Code under analysis: "${code}"
+
+RESPONSE FORMAT (strict):
+SUMMARY: [2-3 sentences — what this code captures]
+CONSISTENCY: [HIGH | MEDIUM | LOW] — [1 sentence explanation]
+NAME_FIT: [GOOD | RENAME] — [if RENAME, suggest new name with reason]
+SPLIT: [NO | YES] — [if YES, describe the two sub-patterns]`;
+}
+
 // ─── Legacy drift check (single pair) ───
 function getDriftCheckPrompt() {
   return `You are a qualitative coding consistency checker. Compare the two coded segments below.

@@ -55,6 +55,8 @@ let state = {
   _abductionStats: null,
   _driftWarnings: [],
   _dimensionGroundings: {},
+  memos: {},        // { segmentId: 'memo text' }
+  projectMemo: '',  // project-level analytical memo
 };
 
 // ─── Undo stack ───
@@ -69,6 +71,7 @@ function pushUndo(label) {
     codebook: JSON.parse(JSON.stringify(state.codebook)),
     themes: JSON.parse(JSON.stringify(state.themes)),
     dimensions: JSON.parse(JSON.stringify(state.dimensions)),
+    memos: JSON.parse(JSON.stringify(state.memos)),
   });
   if (undoStack.length > UNDO_MAX) undoStack.shift();
 }
@@ -81,6 +84,7 @@ function undo() {
   state.codebook = snap.codebook;
   state.themes = snap.themes;
   state.dimensions = snap.dimensions;
+  if (snap.memos) state.memos = snap.memos;
   saveSession();
   showStatus(t('undo_done'));
   if (currentView === 'coding') renderCodingView();
@@ -90,12 +94,15 @@ function undo() {
 
 // ─── Keyboard shortcuts ───
 document.addEventListener('keydown', (e) => {
-  // Only in coding view, not when typing in inputs
-  if (currentView !== 'coding') return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  // Ctrl+Z — undo in coding, codebook, visualization
+  if (e.key === 'z' && (e.ctrlKey || e.metaKey) && ['coding', 'codebook', 'visualization'].includes(currentView)) {
+    e.preventDefault(); undo(); return;
+  }
+  // Arrow keys — only in coding view
+  if (currentView !== 'coding') return;
   if (e.key === 'ArrowLeft') { e.preventDefault(); prevSegment(); }
   if (e.key === 'ArrowRight') { e.preventDefault(); nextSegment(); }
-  if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
 });
 
 // ─── Provider config (same as Transcript Tool) ───
@@ -571,6 +578,11 @@ function applyPendingFiles(mode) {
     state.themes = {};
     state.dimensions = {};
     state.currentIdx = 0;
+    state._themeAuditTrail = null;
+    state._abductionStats = null;
+    state._driftWarnings = [];
+    state._dimensionGroundings = {};
+    state.memos = {};
     showStatus(`${t('drop_loaded')} ${newSegments.length} ${t('parse_segments')} (${pendingFiles.length} ${pendingFiles.length === 1 ? t('drop_file') : t('drop_files')})`);
   }
 
@@ -625,7 +637,7 @@ function renderCodingView() {
   const coded = state.codedRecords.length;
   const total = state.segments.length;
   const pct = Math.round(coded / total * 100);
-  const alreadyCoded = state.codedRecords.some(r => r.segment_id === seg.segment_id);
+  const alreadyCoded = state.codedRecords.find(r => r.segment_id === seg.segment_id);
 
   let guidedHtml = '';
   if (state.guidedMode && coded === 0 && state.currentIdx === 0) {
@@ -698,8 +710,19 @@ function renderCodingView() {
         <span class="seg-id">${seg.segment_id}</span>
         ${seg.author ? `<span class="seg-author">${escapeHtml(seg.author)}</span>` : ''}
         ${seg.source_file ? `<span class="file-ext" style="margin-left:0.3rem">${escapeHtml(seg.source_file)}</span>` : ''}
+        ${alreadyCoded ? (() => {
+          const c = alreadyCoded.first_order_code;
+          const color = state.codebook[c]?.color || '';
+          return `<span class="coding-stripe" ${color ? `style="border-left:3px solid ${color}"` : ''}><code>${escapeHtml(c)}</code></span>`;
+        })() : ''}
       </div>
-      <div class="segment-text">${escapeHtml(seg.text_primary)}</div>
+      <div class="segment-text" id="segmentTextEl">${escapeHtml(seg.text_primary)}</div>
+      <div class="segment-actions-row">
+        <button class="action-btn small secondary" onclick="saveInVivoCode()" title="${t('invivo_tooltip')}"><i data-lucide="quote" class="icon-sm"></i> ${t('invivo_btn')}</button>
+      </div>
+      <div class="segment-memo-wrap">
+        <textarea class="segment-memo" id="segMemo" placeholder="${t('memo_segment_placeholder')}" onchange="updateSegmentMemo('${seg.segment_id.replace(/'/g, "\\'")}', this.value)">${escapeHtml(state.memos[seg.segment_id] || '')}</textarea>
+      </div>
     </div>
     ${modeHtml}
     <div class="recent-codes" id="recentCodes"></div>
@@ -981,7 +1004,8 @@ function renderAutoView(panel) {
   const coded = state.codedRecords.length;
   const total = state.segments.length;
   const pct = Math.round(coded / total * 100);
-  const uncoded = state.segments.filter(s => !state.codedRecords.some(r => r.segment_id === s.segment_id));
+  const codedIds = new Set(state.codedRecords.map(r => r.segment_id));
+  const uncoded = state.segments.filter(s => !codedIds.has(s.segment_id));
 
   let content = '';
 
@@ -1040,7 +1064,9 @@ async function runAutoCoding() {
 
   autoCancelled = false;
   autoRunning = true;
-  const uncoded = state.segments.filter(s => !state.codedRecords.some(r => r.segment_id === s.segment_id));
+  pushUndo('auto_batch');
+  const codedIdSet = new Set(state.codedRecords.map(r => r.segment_id));
+  const uncoded = state.segments.filter(s => !codedIdSet.has(s.segment_id));
   if (!uncoded.length) { autoRunning = false; renderCodingView(); return; }
 
   let statusEl = document.getElementById('autoStatus');
@@ -1552,7 +1578,7 @@ function registerCode(code, type) {
   if (state.codebook[code]) {
     state.codebook[code].frequency++;
   } else {
-    state.codebook[code] = { definition: '', type: type || 'descriptive', frequency: 1, created: new Date().toISOString() };
+    state.codebook[code] = { definition: '', type: type || 'descriptive', frequency: 1, created: new Date().toISOString(), color: '', memo: '', summary: '' };
   }
 }
 
@@ -1577,6 +1603,72 @@ function renderRecentCodes() {
   if (!recent.length) return;
   el.innerHTML = `<div class="recent-title">${t('coding_recent')}</div>` +
     recent.map(r => `<span class="recent-item">${escapeHtml(r.segment_id)}: <code>${escapeHtml(r.first_order_code)}</code></span>`).join('');
+}
+
+// ─── In-vivo coding ───
+function saveInVivoCode() {
+  const sel = window.getSelection();
+  const text = sel ? sel.toString().trim() : '';
+  if (!text || text.length < 2) { showError(t('invivo_select_first')); return; }
+  if (text.length > 80) { showError(t('invivo_too_long')); return; }
+
+  const seg = state.segments[state.currentIdx];
+  const code = text;
+  const record = {
+    segment_id: seg.segment_id, source_type: state.sourceType, source_file: seg.source_file || '',
+    text_primary: seg.text_primary, author: seg.author || '', first_order_code: code, code_type: 'in_vivo',
+    coding_mode: state.codingMode === 'auto' ? 'auto' : 'inductive', researcher_code: code, tool_proposal: null,
+    final_decision: 'researcher', cycle: 1, coder_id: state.coderId, guided_mode: state.guidedMode,
+    timestamp_coded: new Date().toISOString(), notes: `[in-vivo: "${text}"]`
+  };
+  pushUndo('in_vivo');
+  saveRecord(record);
+  sel.removeAllRanges();
+  if (state.currentIdx < state.segments.length - 1) state.currentIdx++;
+  renderCodingView();
+}
+
+// ─── Segment memos ───
+function updateSegmentMemo(segId, text) {
+  if (text.trim()) { state.memos[segId] = text.trim(); }
+  else { delete state.memos[segId]; }
+  saveSession();
+}
+
+// ─── Code metadata updates ───
+function updateCodeColor(code, color) {
+  if (state.codebook[code]) { state.codebook[code].color = color; saveSession(); }
+}
+
+function updateCodeMemo(code, text) {
+  if (state.codebook[code]) { state.codebook[code].memo = text; saveSession(); }
+}
+
+function updateCodeSummary(code, text) {
+  if (state.codebook[code]) { state.codebook[code].summary = text; saveSession(); }
+}
+
+// ─── Ask AI about code ───
+async function askAIAboutCode(code) {
+  const apiKey = document.getElementById('apiKey').value;
+  if (currentProvider !== 'local' && !apiKey) { showError(t('coding_no_api')); return; }
+
+  const segments = state.codedRecords.filter(r => r.first_order_code === code);
+  if (!segments.length) return;
+
+  const el = document.getElementById('askAIResult_' + CSS.escape(code));
+  if (!el) return;
+  el.innerHTML = `<div class="api-spinner-wrap"><span class="api-spinner"></span> ${t('ask_ai_loading')}</div>`;
+
+  try {
+    abortController = new AbortController();
+    const segTexts = segments.slice(0, 30).map((r, i) => `[${r.segment_id}] ${r.text_primary.substring(0, 300)}`).join('\n');
+    const systemPrompt = getAskCodePrompt(state.codingLang, state.researchQuestion, code);
+    const response = await callAIWithRetry(apiKey, systemPrompt, segTexts, 3, { temperature: 0 });
+    el.innerHTML = `<div class="ask-ai-response">${escapeHtml(response)}</div>`;
+  } catch (err) {
+    el.innerHTML = `<div class="error-msg">${err.message}</div>`;
+  }
 }
 
 // ─── Codebook view ───
@@ -1638,14 +1730,31 @@ function renderCodebookView() {
     </div>
     <input type="text" class="codebook-filter" id="codebookFilter" placeholder="${t('codebook_filter_placeholder')}" oninput="filterCodebook(this.value)">
     <div class="code-table-wrap"><table class="code-table" id="codeTable">
-      <thead><tr><th>${t('codebook_code')}</th><th>${t('codebook_type')}</th><th>${t('codebook_freq')}</th><th>${t('codebook_def')}</th></tr></thead>
-      <tbody>${codes.map(([code, info]) => `
+      <thead><tr><th></th><th>${t('codebook_code')}</th><th>${t('codebook_type')}</th><th>${t('codebook_freq')}</th><th>${t('codebook_def')}</th><th></th></tr></thead>
+      <tbody>${codes.map(([code, info]) => {
+        const safeCode = code.replace(/'/g, "\\'");
+        const codeColor = info.color || '';
+        const hasMemo = !!(info.memo || info.summary);
+        return `
         <tr data-code="${escapeHtml(code.toLowerCase())}">
-          <td><code>${escapeHtml(code)}</code></td>
+          <td><input type="color" class="code-color-pick" value="${codeColor || '#6b7280'}" onchange="updateCodeColor('${safeCode}', this.value)" title="${t('code_color')}"></td>
+          <td><code ${codeColor ? `style="border-left:3px solid ${codeColor};padding-left:4px"` : ''}>${escapeHtml(code)}</code></td>
           <td>${info.type}</td>
           <td>${info.frequency}</td>
-          <td><input type="text" class="def-input" value="${escapeHtml(info.definition || '')}" onchange="updateDefinition('${code.replace(/'/g, "\\'")}', this.value)"></td>
-        </tr>`).join('')}
+          <td><input type="text" class="def-input" value="${escapeHtml(info.definition || '')}" onchange="updateDefinition('${safeCode}', this.value)"></td>
+          <td><button class="link-btn small" onclick="toggleCodeDetail('${safeCode}')" title="${t('code_detail')}">${hasMemo ? '📝' : '⋯'}</button>
+              <button class="link-btn small" onclick="askAIAboutCode('${safeCode}')" title="${t('ask_ai_btn')}">🤖</button></td>
+        </tr>
+        <tr class="code-detail-row" id="codeDetail_${CSS.escape(code)}" style="display:none" data-code="${escapeHtml(code.toLowerCase())}">
+          <td colspan="6">
+            <div class="code-detail-grid">
+              <div><label>${t('code_memo')}</label><textarea class="code-memo-input" onchange="updateCodeMemo('${safeCode}', this.value)" placeholder="${t('code_memo_placeholder')}">${escapeHtml(info.memo || '')}</textarea></div>
+              <div><label>${t('code_summary')}</label><textarea class="code-memo-input" onchange="updateCodeSummary('${safeCode}', this.value)" placeholder="${t('code_summary_placeholder')}">${escapeHtml(info.summary || '')}</textarea></div>
+            </div>
+            <div id="askAIResult_${CSS.escape(code)}"></div>
+          </td>
+        </tr>`;
+      }).join('')}
       </tbody>
     </table></div>
     <button class="action-btn secondary" onclick="suggestConsolidation()">${t('codebook_consolidate')}</button>
@@ -1672,6 +1781,12 @@ function renderCodebookView() {
       </div>
       <div id="aiDimsResult"></div>
     </div>
+
+    <h3>${t('codebook_creative_coding')}</h3>
+    <button class="action-btn secondary" onclick="showCreativeCoding()">${t('creative_coding_btn')}</button>
+
+    <h3>${t('project_memo_title')}</h3>
+    <textarea class="project-memo" id="projectMemo" placeholder="${t('project_memo_placeholder')}" onchange="state.projectMemo=this.value;saveSession()">${escapeHtml(state.projectMemo || '')}</textarea>
   `;
   lucide.createIcons();
 }
@@ -1680,10 +1795,19 @@ function updateDefinition(code, def) {
   if (state.codebook[code]) { state.codebook[code].definition = def; saveSession(); }
 }
 
+function toggleCodeDetail(code) {
+  const el = document.getElementById('codeDetail_' + CSS.escape(code));
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
 function filterCodebook(query) {
   const q = query.toLowerCase();
   document.querySelectorAll('#codeTable tbody tr').forEach(row => {
-    row.style.display = !q || row.dataset.code.includes(q) ? '' : 'none';
+    if (row.classList.contains('code-detail-row')) {
+      if (q) row.style.display = 'none'; // hide details when filtering
+    } else {
+      row.style.display = !q || row.dataset.code.includes(q) ? '' : 'none';
+    }
   });
 }
 
@@ -2018,9 +2142,11 @@ async function generateThemesAI() {
     saveSession();
     if (currentView === 'codebook') renderCodebookView();
     else if (currentView === 'visualization') renderVisualizationView();
-    if (el) el.innerHTML = `<div class="status-msg">${t('gen_themes_done')} ${Object.keys(state.themes).length}</div>`;
+    const el2 = document.getElementById('aiThemesResult');
+    if (el2) el2.innerHTML = `<div class="status-msg">${t('gen_themes_done')} ${Object.keys(state.themes).length}</div>`;
   } catch (err) {
-    if (el) el.innerHTML = `<div class="error-msg">${err.message}</div>`;
+    const elErr = document.getElementById('aiThemesResult');
+    if (elErr) elErr.innerHTML = `<div class="error-msg">${err.message}</div>`;
   }
 }
 
@@ -2050,12 +2176,15 @@ async function generateDimensionsAI() {
       saveSession();
       if (currentView === 'codebook') renderCodebookView();
       else if (currentView === 'visualization') renderVisualizationView();
-      if (el) el.innerHTML = `<div class="status-msg">${t('gen_dims_done')} ${Object.keys(newDims).length}</div>`;
+      const el2 = document.getElementById('aiDimsResult');
+      if (el2) el2.innerHTML = `<div class="status-msg">${t('gen_dims_done')} ${Object.keys(newDims).length}</div>`;
     } else {
-      if (el) el.innerHTML = `<div class="error-msg">${t('gen_dims_fail')}</div>`;
+      const elF = document.getElementById('aiDimsResult');
+      if (elF) elF.innerHTML = `<div class="error-msg">${t('gen_dims_fail')}</div>`;
     }
   } catch (err) {
-    if (el) el.innerHTML = `<div class="error-msg">${err.message}</div>`;
+    const elErr = document.getElementById('aiDimsResult');
+    if (elErr) elErr.innerHTML = `<div class="error-msg">${err.message}</div>`;
   }
 }
 
@@ -2236,6 +2365,8 @@ function renderVisualizationView() {
     <h3>${t('viz_gioia')}</h3>
     ${gioiaHtml}
     ${groundingHtml}
+    ${renderCodeDocMatrix()}
+    ${renderCoOccurrenceMatrix()}
     <h3>${t('viz_freq')}</h3>
     <div class="code-bars">${Object.entries(codes).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c, i]) => {
       const w = Math.round(i.frequency / totalCoded * 100);
@@ -2243,6 +2374,189 @@ function renderVisualizationView() {
     }).join('')}</div>
   `;
   lucide.createIcons();
+}
+
+// ─── Code × Document matrix ───
+function renderCodeDocMatrix() {
+  const files = [...new Set(state.codedRecords.map(r => r.source_file).filter(Boolean))];
+  if (files.length < 2) return ''; // only useful with multiple files
+
+  const topCodes = Object.entries(state.codebook).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 20).map(([c]) => c);
+  // Build matrix
+  const matrix = {};
+  for (const code of topCodes) { matrix[code] = {}; for (const f of files) matrix[code][f] = 0; }
+  for (const r of state.codedRecords) {
+    if (r.source_file && matrix[r.first_order_code]) matrix[r.first_order_code][r.source_file]++;
+  }
+  const maxVal = Math.max(1, ...Object.values(matrix).flatMap(row => Object.values(row)));
+
+  const headerCells = files.map(f => `<th class="matrix-file-header" title="${escapeHtml(f)}">${escapeHtml(f.length > 12 ? f.substring(0, 10) + '..' : f)}</th>`).join('');
+  const rows = topCodes.map(code => {
+    const color = state.codebook[code]?.color || '';
+    const cells = files.map(f => {
+      const v = matrix[code][f];
+      const intensity = v / maxVal;
+      const bg = v ? `rgba(59,130,246,${0.15 + intensity * 0.7})` : '';
+      return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${code} × ${f}: ${v}">${v || ''}</td>`;
+    }).join('');
+    return `<tr><td class="matrix-code-label">${color ? `<span class="color-dot" style="background:${color}"></span>` : ''}${escapeHtml(code)}</td>${cells}</tr>`;
+  }).join('');
+
+  return `<h3>${t('viz_code_doc_matrix')}</h3>
+    <div class="matrix-wrap"><table class="matrix-table">
+      <thead><tr><th></th>${headerCells}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+// ─── Co-occurrence matrix (proximity-based) ───
+function renderCoOccurrenceMatrix() {
+  const topCodes = Object.entries(state.codebook).sort((a, b) => b[1].frequency - a[1].frequency).slice(0, 15).map(([c]) => c);
+  if (topCodes.length < 3) return '';
+
+  // Build adjacency: codes appearing within 2 segments of each other
+  const cooccur = {};
+  for (const c of topCodes) { cooccur[c] = {}; for (const c2 of topCodes) cooccur[c][c2] = 0; }
+
+  for (let i = 0; i < state.codedRecords.length; i++) {
+    const r1 = state.codedRecords[i];
+    if (!topCodes.includes(r1.first_order_code)) continue;
+    for (let j = i + 1; j < Math.min(i + 3, state.codedRecords.length); j++) {
+      const r2 = state.codedRecords[j];
+      if (!topCodes.includes(r2.first_order_code)) continue;
+      if (r1.first_order_code !== r2.first_order_code) {
+        cooccur[r1.first_order_code][r2.first_order_code]++;
+        cooccur[r2.first_order_code][r1.first_order_code]++;
+      }
+    }
+  }
+
+  const maxVal = Math.max(1, ...topCodes.flatMap(c => topCodes.map(c2 => cooccur[c][c2])));
+  const headerCells = topCodes.map(c => `<th class="matrix-file-header" title="${escapeHtml(c)}">${escapeHtml(c.length > 8 ? c.substring(0, 7) + '..' : c)}</th>`).join('');
+  const rows = topCodes.map(code => {
+    const cells = topCodes.map(c2 => {
+      if (code === c2) return '<td class="matrix-cell matrix-diag"></td>';
+      const v = cooccur[code][c2];
+      const intensity = v / maxVal;
+      const bg = v ? `rgba(234,88,12,${0.15 + intensity * 0.7})` : '';
+      return `<td class="matrix-cell" style="${bg ? 'background:' + bg : ''}" title="${code} ↔ ${c2}: ${v}">${v || ''}</td>`;
+    }).join('');
+    return `<tr><td class="matrix-code-label">${escapeHtml(code.length > 12 ? code.substring(0, 11) + '..' : code)}</td>${cells}</tr>`;
+  }).join('');
+
+  return `<h3>${t('viz_cooccurrence')}</h3>
+    <p class="matrix-hint">${t('viz_cooccurrence_hint')}</p>
+    <div class="matrix-wrap"><table class="matrix-table">
+      <thead><tr><th></th>${headerCells}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+// ─── Creative coding (visual drag-and-drop grouping) ───
+function showCreativeCoding() {
+  const overlay = document.createElement('div');
+  overlay.id = 'creativeCodingOverlay';
+  overlay.className = 'cc-overlay';
+
+  const allCodes = Object.keys(state.codebook).sort();
+  const assignedCodes = new Set(Object.values(state.themes).flat());
+  const unassigned = allCodes.filter(c => !assignedCodes.has(c));
+
+  const codeChips = (codes, draggable) => codes.map(c => {
+    const color = state.codebook[c]?.color || '#6b7280';
+    return `<div class="cc-chip" draggable="${draggable}" data-code="${escapeHtml(c)}" style="border-left:3px solid ${color}">${escapeHtml(c)} <span class="cc-chip-freq">(${state.codebook[c]?.frequency || 0})</span></div>`;
+  }).join('');
+
+  const themeColumns = Object.entries(state.themes).map(([name, codes]) => `
+    <div class="cc-theme-col" data-theme="${escapeHtml(name)}">
+      <div class="cc-theme-header">${escapeHtml(name)} <button class="tag-remove" onclick="ccRemoveTheme('${name.replace(/'/g, "\\'")}')" title="×">×</button></div>
+      <div class="cc-drop-zone" data-theme="${escapeHtml(name)}">${codeChips(codes, true)}</div>
+    </div>`).join('');
+
+  overlay.innerHTML = `
+    <div class="cc-modal">
+      <div class="cc-header">
+        <h3>${t('creative_coding_title')}</h3>
+        <button class="action-btn secondary" onclick="closeCreativeCoding()">${t('creative_coding_close')}</button>
+      </div>
+      <div class="cc-body">
+        <div class="cc-pool">
+          <div class="cc-pool-header">${t('creative_coding_pool')} (${unassigned.length})</div>
+          <div class="cc-drop-zone" data-theme="__pool__">${codeChips(unassigned, true)}</div>
+        </div>
+        <div class="cc-themes">
+          ${themeColumns}
+          <div class="cc-new-theme">
+            <input type="text" id="ccNewTheme" placeholder="${t('theme_name_placeholder')}" onkeydown="if(event.key==='Enter')ccCreateTheme()">
+            <button class="action-btn small" onclick="ccCreateTheme()">+</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  initCreativeCodingDrag();
+}
+
+function closeCreativeCoding() {
+  document.getElementById('creativeCodingOverlay')?.remove();
+  if (currentView === 'codebook') renderCodebookView();
+}
+
+function ccCreateTheme() {
+  const input = document.getElementById('ccNewTheme');
+  const name = input?.value.trim();
+  if (!name || state.themes[name]) return;
+  pushUndo('ccCreateTheme');
+  state.themes[name] = [];
+  saveSession();
+  closeCreativeCoding();
+  showCreativeCoding();
+}
+
+function ccRemoveTheme(name) {
+  pushUndo('ccRemoveTheme');
+  delete state.themes[name];
+  saveSession();
+  closeCreativeCoding();
+  showCreativeCoding();
+}
+
+function initCreativeCodingDrag() {
+  const overlay = document.getElementById('creativeCodingOverlay');
+  if (!overlay) return;
+
+  overlay.querySelectorAll('.cc-chip').forEach(chip => {
+    chip.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', chip.dataset.code);
+      chip.classList.add('cc-dragging');
+    });
+    chip.addEventListener('dragend', () => chip.classList.remove('cc-dragging'));
+  });
+
+  overlay.querySelectorAll('.cc-drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('cc-drop-hover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('cc-drop-hover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('cc-drop-hover');
+      const code = e.dataTransfer.getData('text/plain');
+      const targetTheme = zone.dataset.theme;
+      if (!code) return;
+
+      pushUndo('ccDrop');
+      // Remove from all themes first
+      for (const [t2, codes] of Object.entries(state.themes)) {
+        state.themes[t2] = codes.filter(c => c !== code);
+      }
+      // Add to target theme (unless pool)
+      if (targetTheme !== '__pool__' && state.themes[targetTheme]) {
+        state.themes[targetTheme].push(code);
+      }
+      saveSession();
+      closeCreativeCoding();
+      showCreativeCoding();
+    });
+  });
 }
 
 // ─── Export view ───
@@ -2257,6 +2571,7 @@ function renderExportView() {
       <button class="export-btn" onclick="exportCSV()"><i data-lucide="table" class="icon-sm"></i> ${t('export_csv')}</button>
       <button class="export-btn" onclick="exportGioia()"><i data-lucide="layout-grid" class="icon-sm"></i> ${t('export_gioia')}</button>
       <button class="export-btn" onclick="exportReport()"><i data-lucide="file-text" class="icon-sm"></i> ${t('export_report')}</button>
+      <button class="export-btn" onclick="exportREFI_QDA()"><i data-lucide="package" class="icon-sm"></i> ${t('export_refi')}</button>
     </div>
     <div id="exportPreview"></div>
   `;
@@ -2340,7 +2655,7 @@ function restoreSession() {
 
 function dismissSession() {
   document.getElementById('sessionBar').style.display = 'none';
-  state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {} };
+  state = { configured: false, sourceType: null, codingMode: 'inductive', guidedMode: false, codingLang: 'pl', coderId: '', thresholdN: 20, batchSize: 10, researchQuestion: '', framework: '', segments: [], currentIdx: 0, codedRecords: [], codebook: {}, themes: {}, dimensions: {}, _themeAuditTrail: null, _abductionStats: null, _driftWarnings: [], _dimensionGroundings: {}, memos: {}, projectMemo: '' };
   localStorage.removeItem('coding_tool_session');
 }
 
@@ -2348,6 +2663,21 @@ function resetSession() {
   if (!confirm(t('reset_confirm'))) return;
   dismissSession();
   undoStack.length = 0;
+  // Clear form fields
+  const fields = { coderId: '', researchQuestion: '', framework: '', importText: '' };
+  for (const [id, val] of Object.entries(fields)) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+  const guidedEl = document.getElementById('guidedMode');
+  if (guidedEl) guidedEl.checked = false;
+  const modeRadio = document.querySelector('input[name="codingMode"][value="inductive"]');
+  if (modeRadio) modeRadio.checked = true;
+  const previewEl = document.getElementById('previewArea');
+  if (previewEl) previewEl.innerHTML = '';
+  const fileListEl = document.getElementById('fileList');
+  if (fileListEl) { fileListEl.innerHTML = ''; fileListEl.style.display = 'none'; }
+  pendingFiles = [];
   showView('setup');
   showStatus(t('reset_done'));
 }

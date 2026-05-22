@@ -584,6 +584,48 @@ const I18N = {
   gioia_col_codes: { pl: 'Koncepty pierwszego rzędu', en: 'First-order concepts' },
   gioia_col_themes: { pl: 'Tematy drugiego rzędu', en: 'Second-order themes' },
   gioia_col_dims: { pl: 'Wymiary zagregowane', en: 'Aggregate dimensions' },
+
+  // In-vivo coding
+  invivo_btn: { pl: 'In-vivo', en: 'In-vivo' },
+  invivo_tooltip: { pl: 'Zaznacz tekst i kliknij, aby utworzyć kod in-vivo z zaznaczenia', en: 'Select text and click to create an in-vivo code from selection' },
+  invivo_select_first: { pl: 'Zaznacz fragment tekstu (2–80 znaków), aby utworzyć kod in-vivo.', en: 'Select a text fragment (2–80 chars) to create an in-vivo code.' },
+  invivo_too_long: { pl: 'Zaznaczenie zbyt długie (max 80 znaków). Zaznacz krótszy fragment.', en: 'Selection too long (max 80 chars). Select a shorter fragment.' },
+
+  // Segment memo
+  memo_segment_placeholder: { pl: 'Notatka analityczna do tego segmentu...', en: 'Analytical memo for this segment...' },
+
+  // Code metadata (codebook)
+  code_color: { pl: 'Kolor', en: 'Color' },
+  code_detail: { pl: 'Szczegóły', en: 'Details' },
+  code_memo: { pl: 'Memo kodu', en: 'Code memo' },
+  code_memo_placeholder: { pl: 'Notatka analityczna do kodu...', en: 'Analytical memo for this code...' },
+  code_summary: { pl: 'Podsumowanie', en: 'Summary' },
+  code_summary_placeholder: { pl: 'Krótkie podsumowanie — czym jest ten kod...', en: 'Brief summary — what this code captures...' },
+
+  // Ask AI about code
+  ask_ai_btn: { pl: 'Zapytaj AI', en: 'Ask AI' },
+  ask_ai_loading: { pl: 'Analizuję kod...', en: 'Analyzing code...' },
+
+  // Project memo
+  project_memo_title: { pl: 'Memo projektu', en: 'Project memo' },
+  project_memo_placeholder: { pl: 'Ogólne notatki analityczne, refleksje, obserwacje...', en: 'General analytical notes, reflections, observations...' },
+
+  // Matrices
+  viz_code_doc_matrix: { pl: 'Macierz kod × dokument', en: 'Code × Document Matrix' },
+  viz_cooccurrence: { pl: 'Macierz współwystępowania kodów', en: 'Code Co-occurrence Matrix' },
+  viz_cooccurrence_hint: { pl: 'Kody pojawiające się w sąsiednich segmentach (okno ±2). Im ciemniejszy kolor, tym częstsze współwystępowanie.', en: 'Codes appearing in adjacent segments (±2 window). Darker color = more frequent co-occurrence.' },
+
+  // Creative coding
+  creative_coding_title: { pl: 'Creative Coding — grupowanie wizualne', en: 'Creative Coding — visual grouping' },
+  creative_coding_btn: { pl: 'Creative Coding', en: 'Creative Coding' },
+  creative_coding_close: { pl: 'Zamknij', en: 'Close' },
+  creative_coding_pool: { pl: 'Kody nieprzypisane', en: 'Unassigned codes' },
+  codebook_creative_coding: { pl: 'Otwórz Creative Coding (drag & drop)', en: 'Open Creative Coding (drag & drop)' },
+
+  // REFI-QDA export
+  export_refi: { pl: 'REFI-QDA (.qdpx)', en: 'REFI-QDA (.qdpx)' },
+  export_refi_done: { pl: 'Plik REFI-QDA wygenerowany.', en: 'REFI-QDA file generated.' },
+  export_refi_no_jszip: { pl: 'Brak biblioteki JSZip — odśwież stronę.', en: 'JSZip library not loaded — refresh the page.' },
 };
 
 function t(key) {
