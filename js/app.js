@@ -1281,6 +1281,12 @@ function checkSaturation() {
 }
 
 // ─── Shared dimension parser ───
+function toSentenceCase(s) {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+    .replace(/ — /g, ' — '); // preserve em-dash spacing
+}
+
 function parseDimensionsResponse(response) {
   const newDims = {};
   const groundings = {};
@@ -1326,7 +1332,7 @@ function parseDimensionsResponse(response) {
       if (currentDim && newDims[currentDim]) {
         groundings[currentDim] = { theory: currentTheory, author: currentAuthor, text: currentGrounding };
       }
-      currentDim = line.split(':').slice(1).join(':').trim();
+      currentDim = toSentenceCase(line.split(':').slice(1).join(':').trim());
       currentTheory = ''; currentAuthor = ''; currentGrounding = '';
     } else if ((upper.startsWith('THEMES:') || upper.startsWith('TEMATY:')) && currentDim) {
       flushThemes();
