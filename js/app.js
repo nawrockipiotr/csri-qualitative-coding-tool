@@ -670,7 +670,7 @@ function renderCodingView() {
 
   const coded = state.codedRecords.length;
   const total = state.segments.length;
-  const pct = Math.round(coded / total * 100);
+  const pct = total ? Math.round(coded / total * 100) : 0;
   const alreadyCoded = state.codedRecords.find(r => r.segment_id === seg.segment_id);
 
   let guidedHtml = '';
@@ -1047,7 +1047,7 @@ let autoRunning = false;
 function renderAutoView(panel) {
   const coded = state.codedRecords.length;
   const total = state.segments.length;
-  const pct = Math.round(coded / total * 100);
+  const pct = total ? Math.round(coded / total * 100) : 0;
   const codedIds = new Set(state.codedRecords.map(r => r.segment_id));
   const uncoded = state.segments.filter(s => !codedIds.has(s.segment_id));
 
@@ -1635,7 +1635,8 @@ function renderAutoReview() {
   const pageRecords = records.slice(start, start + AUTO_REVIEW_PAGE_SIZE);
 
   const rows = pageRecords.map((r) => {
-    const textPreview = r.text_primary.length > 120 ? r.text_primary.substring(0, 120) + '...' : r.text_primary;
+    const tp = r.text_primary || '';
+    const textPreview = tp.length > 120 ? tp.substring(0, 120) + '...' : tp;
     return `<tr>
       <td class="seg-id">${r.segment_id}</td>
       <td>${escapeHtml(textPreview)}</td>
@@ -2926,7 +2927,7 @@ async function renderSessionsView() {
           </div>
           <div class="session-card-actions">
             ${!isActive ? `<button class="btn-xs btn-primary" onclick="sessSwitchTo('${s.id}')" title="${t('sess_switch')}"><i data-lucide="log-in" class="icon-sm"></i></button>` : ''}
-            <button class="btn-xs" onclick="sessRename('${s.id}', '${escapeHtml(s.name)}')" title="${t('sess_rename')}"><i data-lucide="pencil" class="icon-sm"></i></button>
+            <button class="btn-xs" onclick="sessRename('${s.id}', ${JSON.stringify(s.name).replace(/</g, '\\u003c')})" title="${t('sess_rename')}"><i data-lucide="pencil" class="icon-sm"></i></button>
             <button class="btn-xs" onclick="sessDuplicate('${s.id}')" title="${t('sess_duplicate')}"><i data-lucide="copy" class="icon-sm"></i></button>
             <button class="btn-xs" onclick="sessExport('${s.id}')" title="${t('sess_export')}"><i data-lucide="download" class="icon-sm"></i></button>
             ${!isActive ? `<button class="btn-xs btn-danger" onclick="sessDelete('${s.id}')" title="${t('sess_delete')}"><i data-lucide="trash-2" class="icon-sm"></i></button>` : ''}

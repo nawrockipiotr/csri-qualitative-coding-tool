@@ -130,7 +130,7 @@ function exportReport() {
 
   const decisions = {};
   state.codedRecords.forEach(r => { decisions[r.final_decision] = (decisions[r.final_decision] || 0) + 1; });
-  const decLines = Object.entries(decisions).map(([k, v]) => `  ${k}: ${v} (${Math.round(v / coded * 100)}%)`).join('\n');
+  const decLines = Object.entries(decisions).map(([k, v]) => `  ${k}: ${v} (${coded ? Math.round(v / coded * 100) : 0}%)`).join('\n');
 
   const codeLines = Object.entries(codes)
     .sort((a, b) => b[1].frequency - a[1].frequency)
@@ -272,7 +272,7 @@ function exportVisualizationHTML() {
   const totalCoded = records.length;
   const totalCodes = Object.keys(codes).length;
   const singletons = Object.values(codes).filter(c => c.frequency === 1).length;
-  const singletonPct = Math.round(singletons / totalCodes * 100);
+  const singletonPct = totalCodes ? Math.round(singletons / totalCodes * 100) : 0;
   const overloaded = Object.entries(codes).filter(([, c]) => c.frequency > totalCoded * 0.15);
 
   // Gioia table
@@ -532,4 +532,4 @@ function exportGioiaSVG() {
 // ─── Helpers ───
 function ts() { return new Date().toISOString().replace(/[:.]/g, '').substring(0, 15); }
 function csvEsc(s) { return s && (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : (s || ''); }
-function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function escapeHtml(s) { return (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
