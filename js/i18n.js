@@ -752,6 +752,12 @@ function setLang(lang) {
     if (hintEl) hintEl.innerHTML = t('hint_' + currentProvider);
   }
 
+  // If demo mode is active, reload demo data in the new language
+  if (typeof window._demoMode !== 'undefined' && window._demoMode && typeof DEMO !== 'undefined') {
+    DEMO.run();
+    return; // run() already calls showView + renderCodingView
+  }
+
   // Re-render active view
   if (typeof currentView !== 'undefined' && typeof showView === 'function') {
     showView(currentView);
