@@ -1,0 +1,77 @@
+[
+  {
+    "segment_id": "S01",
+    "text_primary": "When we started implementing the ERP system, nobody in the company knew how it would affect their daily work. Management said things would get better, but people on the shop floor were afraid they'd lose their jobs.",
+    "author": "R1"
+  },
+  {
+    "segment_id": "S02",
+    "text_primary": "The training was too short. Two days for the entire warehouse module — that's not enough. People went back to their stations and had no idea what to click.",
+    "author": "R1"
+  },
+  {
+    "segment_id": "S03",
+    "text_primary": "The line manager told us straight: 'Do it the old way until the system stabilises.' That was a clear signal that middle management didn't believe in the project.",
+    "author": "R2"
+  },
+  {
+    "segment_id": "S04",
+    "text_primary": "After three months it turned out the data in the system didn't match what we had on paper. Nobody had verified whether the data migration went correctly.",
+    "author": "R2"
+  },
+  {
+    "segment_id": "S05",
+    "text_primary": "The only person who truly understood the system was the external consultant. When his contract ended, we were left alone with the problems.",
+    "author": "R3"
+  },
+  {
+    "segment_id": "S06",
+    "text_primary": "Eventually we started creating informal instructions ourselves — screenshots, step-by-step guides. It wasn't official, but it worked better than the vendor's documentation.",
+    "author": "R3"
+  },
+  {
+    "segment_id": "S07",
+    "text_primary": "Senior management didn't want to hear about problems. In meetings they said the rollout was on track. But we were seeing something completely different.",
+    "author": "R4"
+  },
+  {
+    "segment_id": "S08",
+    "text_primary": "Yes.",
+    "author": "R4"
+  },
+  {
+    "segment_id": "S09",
+    "text_primary": "",
+    "author": "R4"
+  },
+  {
+    "segment_id": "S10",
+    "text_primary": "Hmm... I don't know... I think so, but I'm not sure what exactly you're asking.",
+    "author": "R5"
+  },
+  {
+    "segment_id": "S11",
+    "text_primary": "The key issue was that IT and production didn't talk to each other at all. IT assumed they knew what production needed, but they never actually asked.",
+    "author": "R5"
+  },
+  {
+    "segment_id": "S12",
+    "text_primary": "After a year of using it, I can say the system proved its worth, but it cost us a lot of nerves. If we'd had better training at the start, we would have saved six months of frustration.",
+    "author": "R6"
+  },
+  {
+    "segment_id": "S13",
+    "text_primary": "The most annoying thing was that the system required entering the same data in three different places. It was completely illogical.",
+    "author": "R6"
+  },
+  {
+    "segment_id": "S14",
+    "text_primary": "R7",
+    "author": "R7"
+  },
+  {
+    "segment_id": "S15",
+    "text_primary": "The change came when the new IT manager sat down on the shop floor and worked with people for a week. Only then did he understand what the real problems were, and started solving them.",
+    "author": "R7"
+  }
+]

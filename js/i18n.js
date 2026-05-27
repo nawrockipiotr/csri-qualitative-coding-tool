@@ -706,6 +706,15 @@ const I18N = {
   loading: { pl: 'Ładowanie', en: 'Loading' },
   viz_legend_show: { pl: 'Pokaż legendę', en: 'Show legend' },
   viz_legend_hide: { pl: 'Zwiń legendę', en: 'Hide legend' },
+
+  // Demo mode
+  demo_btn: { pl: 'Demo', en: 'Demo' },
+  demo_run: { pl: 'Wdrożenie ERP (15 segmentów)', en: 'ERP implementation (15 segments)' },
+  demo_tooltip: { pl: 'Załaduj przykładowe wyniki bez klucza API', en: 'Load sample results without API key' },
+  demo_loaded: { pl: 'Demo załadowane — eksploruj zakładki Kodowanie, Codebook, Wizualizacja, Eksport', en: 'Demo loaded — explore the Coding, Codebook, Visualization, and Export tabs' },
+  demo_guide_banner: { pl: 'Przeglądasz pre-generowane wyniki demonstracyjne. Wszystkie widoki (kodowanie, codebook, tematy, wymiary, tabela Gioia) są wypełnione przykładowymi danymi — kliknij zakładki nawigacyjne, aby je obejrzeć. Aby rozpocząć własną analizę, kliknij „Nowa sesja".', en: 'You are viewing pre-generated demo results. All views (coding, codebook, themes, dimensions, Gioia table) are populated with sample data — click the navigation tabs to explore. To start your own analysis, click "New session".' },
+  info_demo: { pl: 'Demo', en: 'Demo mode' },
+  info_demo_text: { pl: 'Tryb demo pozwala eksplorować wszystkie widoki i funkcje bez klucza API. Ładuje przykładowy zestaw danych (wywiady częściowo ustrukturyzowane o wdrożeniu ERP) z pre-generowanymi kodami, tematami, wymiarami i uzasadnieniem teoretycznym — pełny pipeline Gioia. Kliknij przycisk Demo pod strefą przeciągania plików, aby spróbować.', en: 'Demo mode lets you explore every view and feature without an API key. It loads a sample dataset (semi-structured interviews about ERP implementation) with pre-generated codes, themes, dimensions, and theoretical grounding — the full Gioia pipeline. Click the Demo button below the drop zone to try it.' },
 };
 
 function t(key) {
